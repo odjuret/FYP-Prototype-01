@@ -2,4 +2,26 @@
     <string name="app_name">GoogleMapsGooglePlaces</string>
     <string name="google_maps_API_key">AIzaSyCXcpvtlfWqga_YO7NX8Dg45mtMSvjNK2k</string>
 
+
+    <string name="country_prompt">Choose a country</string>
+
+    <string-array name="building_arrays">
+        <item>DSU - Campus Centre Building</item>
+        <item>GH - Gateway House</item>
+        <item>building test 1</item>
+        <item>building test 2</item>
+        <item>building test 3</item>
+        <item>building test 4</item>
+        <item>building test 5</item>
+        <item>building test 6</item>
+        <item>Sweden Rulez</item>
+        <item>Sweden Rulez</item>
+        <item>Sweden Rulez</item>
+        <item>Sweden Rulez</item>
+        <item>Sweden Rulez</item>
+        <item>Sweden Rulez</item>
+        <item>Sweden Rulez</item>
+
+    </string-array>
+
 </resources>
