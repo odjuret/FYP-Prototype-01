@@ -1,12 +1,11 @@
 package jimjam.googlemapsgoogleplaces;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -16,14 +15,17 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
-import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Spinner;
+import android.widget.ListView;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -59,12 +61,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import jimjam.googlemapsgoogleplaces.models.MarkerModel;
 
 /**
  * Created by Jimmie on 26/01/2018.
@@ -86,6 +88,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private LocationRequest mLocationRequest = new LocationRequest();
     private LocationCallback mLocationCallback;
+    private MarkerModel markerModel;
 
     //instance saved variables
     private static final String REQUESTING_LOCATION_UPDATES_KEY = "REQUESTING_LOCATION_UPDATES_KEY_SAVED";
@@ -93,8 +96,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     //widgets
     private ImageView mGps;
-    private Spinner mSpinner;
     private Polyline polyline = null;
+        //dropdown menu
+        private Button buttonShowDropDown;
+        private PopupWindow popupWindow;
+        private String popUpContents[];
+
 
     //methods
     @Override
@@ -163,27 +170,35 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mGps = (ImageView) findViewById(R.id.ic_gps);
 
         //Drop down menu select thingy listener
-        mSpinner = (Spinner) findViewById(R.id.spinner1);
-        mSpinner.setSelection(1, false);
-        mSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "onItemSelected: selected item: " +parent.getItemAtPosition(position).toString());
-                if (parent.getItemAtPosition(position).toString().contains("GH")) {
-                    moveCamera(new LatLng(52.629381,-1.138030), DEFAULT_ZOOM);
+        List<String> markerList = new ArrayList<String>();
+        markerList.add("GH - Gateway House::1");
+        markerList.add("CC - Campus Centre::2");
+        markerList.add("CH - Clephan Building::3");
+        markerList.add("Q  - Queens Building::4");
 
-                    showDirections(new LatLng(52.629381,-1.138030));
+        // convert to simple array
+        popUpContents = new String[markerList.size()];
+        markerList.toArray(popUpContents);
+        popupWindow = popupWindowMarkers();
+
+        buttonShowDropDown = (Button) findViewById(R.id.buttonShowDropDown);
+        buttonShowDropDown.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switch (v.getId()) {
+
+                    case R.id.buttonShowDropDown:
+                        // show the list view as dropdown
+                        Log.d(TAG, "buttonShowDropDown: onClick: trying to display popup");
+                        popupWindow.showAsDropDown(v, -5, 0);
+                        break;
                 }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
             }
         });
 
+        //check permissions for locating this device
         getLocationPermission();
-
+        //check if requesting location updates is paused and if so can simply resume updating
         if (savedInstanceState != null){
             updateValuesFromBundle(savedInstanceState);
         }
@@ -588,5 +603,90 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 Log.d(TAG, "TaskParser: onPostExecute: directions not found");
             }
         }
+    }
+
+    /*---------------------- custom dropdown menu classes ---------------------------*/
+    public PopupWindow popupWindowMarkers() {
+        Log.d(TAG, "popupWindowMarkers: creating popupwindow");
+        // initialize a pop up window type
+        PopupWindow popupWindowMarkers = new PopupWindow(this);
+
+        // the drop down list is a list view
+        ListView listViewMarkers = new ListView(this);
+
+        // set our adapter and pass our pop up window contents
+        listViewMarkers.setAdapter(listViewAdapter(popUpContents));
+
+        // set the item click listener
+        listViewMarkers.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+                // get the context and main activity to access variables
+                Context mContext = MapActivity.this;
+
+                // add some animation when a list item was clicked
+                Animation fadeInAnimation = AnimationUtils.loadAnimation(v.getContext(), android.R.anim.fade_in);
+                fadeInAnimation.setDuration(10);
+                v.startAnimation(fadeInAnimation);
+
+                // dismiss the pop up
+                popupWindow.dismiss();
+
+                // get the text and set it as the button text
+                String selectedItemText = ((TextView) v).getText().toString();
+                buttonShowDropDown.setText(selectedItemText);
+
+                // get the id
+                String selectedItemTag = ((TextView) v).getTag().toString();
+                Toast.makeText(mContext, "ID is: " + selectedItemTag, Toast.LENGTH_SHORT).show();
+
+            }
+
+        });
+
+        // some other visual settings
+        popupWindowMarkers.setFocusable(true);
+        popupWindowMarkers.setWidth(WindowManager.LayoutParams.WRAP_CONTENT);
+        popupWindowMarkers.setHeight(WindowManager.LayoutParams.WRAP_CONTENT);
+        popupWindowMarkers.setBackgroundDrawable(getResources().getDrawable(R.drawable.white_border));
+
+        // set the list view as pop up window content
+        popupWindowMarkers.setContentView(listViewMarkers);
+
+        return popupWindowMarkers;
+    }
+
+
+    /*
+     * adapter where the list values will be set
+     */
+    private ArrayAdapter<String> listViewAdapter(String markerArray[]) {
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, markerArray) {
+
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+
+                // setting the ID and text for every items in the list
+                String item = getItem(position);
+                String[] itemArr = item.split("::");
+                String text = itemArr[0];
+                String id = itemArr[1];
+
+                // visual settings for the list item
+                TextView listItem = new TextView(MapActivity.this);
+
+                listItem.setText(text);
+                listItem.setTag(id);
+                listItem.setTextSize(22);
+                listItem.setPadding(10, 10, 10, 10);
+                listItem.setTextColor(Color.BLACK);
+                listItem.setMaxLines(1);
+
+                return listItem;
+            }
+        };
+
+        return adapter;
     }
 }
