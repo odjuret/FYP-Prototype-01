@@ -92,7 +92,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Boolean mRequestingLocationUpdates = false;
 
     //widgets
-    private EditText mSearchText;
     private ImageView mGps;
     private Spinner mSpinner;
     private Polyline polyline = null;
@@ -161,9 +160,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
-        mSearchText = (EditText) findViewById(R.id.input_search);
         mGps = (ImageView) findViewById(R.id.ic_gps);
+
+        //Drop down menu select thingy listener
         mSpinner = (Spinner) findViewById(R.id.spinner1);
+        mSpinner.setSelection(1, false);
         mSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -193,8 +194,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 for (Location location : locationResult.getLocations()) {
                     // Update UI with location data
                     // ...
-                    moveCamera(new LatLng(location.getLatitude(), location.getLongitude()), DEFAULT_ZOOM);
                     Log.d(TAG, "onLocationResult: shit is moving around!");
+                    moveCamera(new LatLng(location.getLatitude(), location.getLongitude()), DEFAULT_ZOOM);
                 }
             }
         };
@@ -234,21 +235,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private void init(){
         Log.d(TAG, "init: initializing");
 
-        mSearchText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_SEARCH
-                        || actionId == EditorInfo.IME_ACTION_DONE
-                        || event.getAction() == KeyEvent.ACTION_DOWN
-                        || event.getAction() == KeyEvent.KEYCODE_ENTER){
-
-                    //execute our method for searching
-                    geoLocate();
-                }
-
-                return false;
-            }
-        });
 
         mGps.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -261,27 +247,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         hideSoftKeyboard();
     }
 
-    private void geoLocate(){
-        Log.d(TAG, "geoLocate: geo locating");
-
-        String searchString = mSearchText.getText().toString();
-
-        Geocoder geocoder = new Geocoder(MapActivity.this);
-        List<Address> list = new ArrayList<>();
-        try {
-            list = geocoder.getFromLocationName(searchString, 1);
-        }catch (IOException e){
-            Log.e(TAG, "geoLocate: IOException: " + e.getMessage() );
-        }
-
-        if (list.size() > 0) {
-            Address address = list.get(0);
-
-            Log.d(TAG, "geoLocate: found a location: " + address.toString());
-
-            moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), DEFAULT_ZOOM);
-        }
-    }
 
     /**
      * Call this method to draw a polyline between current location and @param latLng.

@@ -3,7 +3,7 @@
     <string name="google_maps_API_key">AIzaSyCXcpvtlfWqga_YO7NX8Dg45mtMSvjNK2k</string>
 
 
-    <string name="country_prompt">Choose a country</string>
+    <string name="spinner_prompt">Select a place...</string>
 
     <string-array name="building_arrays">
         <item>DSU - Campus Centre Building</item>
