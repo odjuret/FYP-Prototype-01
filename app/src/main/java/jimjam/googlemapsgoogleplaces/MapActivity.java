@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import jimjam.googlemapsgoogleplaces.models.CustomLatLng;
 import jimjam.googlemapsgoogleplaces.models.MarkerModel;
 
 /**
@@ -89,6 +90,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private LocationRequest mLocationRequest = new LocationRequest();
     private LocationCallback mLocationCallback;
     private MarkerModel markerModel;
+    private ArrayList<CustomLatLng> markerList;
 
     //instance saved variables
     private static final String REQUESTING_LOCATION_UPDATES_KEY = "REQUESTING_LOCATION_UPDATES_KEY_SAVED";
@@ -169,32 +171,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_map);
         mGps = (ImageView) findViewById(R.id.ic_gps);
 
-        //Drop down menu select thingy listener
-        List<String> markerList = new ArrayList<String>();
-        markerList.add("GH - Gateway House::1");
-        markerList.add("CC - Campus Centre::2");
-        markerList.add("CH - Clephan Building::3");
-        markerList.add("Q  - Queens Building::4");
+        //Initialize marker model
+        markerModel = new MarkerModel();
+        markerList = markerModel.getMarkerList();
+        List<String> markerTitleList = markerModel.getMarkerTitles();
+        Log.d(TAG, "onCreate: markerListTitles: " +markerTitleList.toString());
 
-        // convert to simple array
-        popUpContents = new String[markerList.size()];
-        markerList.toArray(popUpContents);
+        //Initialize drop down menu and button for drop down menu
+        popUpContents = new String[markerTitleList.size()];
+        markerTitleList.toArray(popUpContents);
         popupWindow = popupWindowMarkers();
 
         buttonShowDropDown = (Button) findViewById(R.id.buttonShowDropDown);
-        buttonShowDropDown.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                switch (v.getId()) {
-
-                    case R.id.buttonShowDropDown:
-                        // show the list view as dropdown
-                        Log.d(TAG, "buttonShowDropDown: onClick: trying to display popup");
-                        popupWindow.showAsDropDown(v, -5, 0);
-                        break;
-                }
-            }
-        });
 
         //check permissions for locating this device
         getLocationPermission();
@@ -202,18 +190,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         if (savedInstanceState != null){
             updateValuesFromBundle(savedInstanceState);
         }
-
-        mLocationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                for (Location location : locationResult.getLocations()) {
-                    // Update UI with location data
-                    // ...
-                    Log.d(TAG, "onLocationResult: shit is moving around!");
-                    moveCamera(new LatLng(location.getLatitude(), location.getLongitude()), DEFAULT_ZOOM);
-                }
-            }
-        };
     }
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -258,8 +234,31 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 getDeviceLocation();
             }
         });
+        buttonShowDropDown.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switch (v.getId()) {
 
-        hideSoftKeyboard();
+                    case R.id.buttonShowDropDown:
+                        // show the list view as dropdown
+                        Log.d(TAG, "buttonShowDropDown: onClick: trying to display popup");
+                        popupWindow.showAsDropDown(v, -5, 0);
+                        break;
+                }
+            }
+        });
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                for (Location location : locationResult.getLocations()) {
+                    // Update UI with location data
+                    // ...
+                    Log.d(TAG, "mLocationCallBack: onLocationResult: shit is moving around!");
+                    moveCamera(new LatLng(location.getLatitude(), location.getLongitude()), DEFAULT_ZOOM);
+                }
+            }
+        };
+        //hideSoftKeyboard();
     }
 
 
@@ -268,11 +267,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * A polyline being the calculated best travel route by google places API.
      * @param latLng        Destinations Lat Long object
      */
-    private void showDirections(final LatLng latLng){
+    private void showDirections(final CustomLatLng latLng){
         Log.d(TAG, "showDirections: method called");
 
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
         try {
             if (mLocationPermissionGranted) {
 
@@ -308,7 +306,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
     
-    private String getRequestUrl(LatLng origin,LatLng dest){
+    private String getRequestUrl(LatLng origin,CustomLatLng dest){
         //value of origin
         String str_org = "origin=" +origin.latitude +"," +origin.longitude;
         //value of destination
@@ -640,6 +638,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 String selectedItemTag = ((TextView) v).getTag().toString();
                 Toast.makeText(mContext, "ID is: " + selectedItemTag, Toast.LENGTH_SHORT).show();
 
+                // call the show directions method using the id
+                for (CustomLatLng item : markerList) {
+                    if (item.getTitle().contains(selectedItemTag)) {
+                        showDirections(item);
+                    }
+                }
             }
 
         });
