@@ -2,6 +2,7 @@ package jimjam.googlemapsgoogleplaces;
 
 import android.app.Dialog;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.nfc.Tag;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -12,13 +13,49 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback{
 
     private static final String TAG = "MainActivity";
+    private GoogleMap mainMap;
 
     private static final int ERROR_DIALOG_REQUEST = 9001;
 
+    @Override
+    public void onMapReady(GoogleMap googleMap){
+        Toast.makeText(this, "Map is Ready", Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "onMapReady: mainMap is ready");
+        mainMap = googleMap;
+        mainMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(52.629713, -1.138955), 16f));
+
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.style_json));
+
+            if (!success) {
+                Log.e(TAG, "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
+
+    }
+
+    private void initMap(){
+        Log.d(TAG,"initMap: initializing mainMap");
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.mainMap);
+
+        mapFragment.getMapAsync(MainActivity.this);
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (isServicesOK()){
             init();
+            initMap();
         }
     }
 

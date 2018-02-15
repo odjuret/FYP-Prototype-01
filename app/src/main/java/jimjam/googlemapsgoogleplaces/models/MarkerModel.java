@@ -19,10 +19,20 @@ public class MarkerModel {
 
     public MarkerModel(){
         markerList = new ArrayList<>();
-        this.markerList.add(new CustomLatLng(52.629381,-1.138030, "GH - Gateway House::1","ablbalabllbalablba"));
-        this.markerList.add(new CustomLatLng(52.629381,-1.138030, "CC - Campus Centre::2","22222222"));
-        this.markerList.add(new CustomLatLng(52.629381,-1.138030, "CH - Clephan Building::3","333333333"));
-        this.markerList.add(new CustomLatLng(52.629381,-1.138030, "Q  - Queens Building::4","44444444444"));
+        this.markerList.add(new CustomLatLng(52.629381,-1.138030,
+                "GH - Gateway House::1","The Student Gateway." +"\n" +"Information and Help." +"\n"
+                +"Finance Office." +"\n" +"Faculty of Technology Home." +"\n" +"Computer Labs." +"\n"));
+        this.markerList.add(new CustomLatLng(52.629682,-1.138504,
+                "CC - Campus Centre::2","DMU Students' Union."+"\n" +"DMU Supplies Shop." +"\n" +"Food and Drinks."));
+        this.markerList.add(new CustomLatLng(52.629777,-1.139679,
+                "VP - Vijay Patel Building::3","Art & Design Courses." +"\n" +"DMU Food Village." +"\n"
+                +"Riverside Cafe."));
+        this.markerList.add(new CustomLatLng(52.630757,-1.137346,
+                "CH - Clephan Building::4","Humanities Courses." +"\n" +"Cultural Exchanges Festival."
+                +"\n" +"Sports History and Culture."));
+        this.markerList.add(new CustomLatLng(52.629220,-1.139771,
+                "Q  - Queens Building::5","Technology." +"\n" +"School of Engineering." +"\n"
+                +"Centre of Sustainable Energy." +"\n" +"Leicester Media School."));
     }
 
     public ArrayList<CustomLatLng> getMarkerList() {

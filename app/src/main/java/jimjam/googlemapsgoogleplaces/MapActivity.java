@@ -9,6 +9,8 @@ import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -43,11 +45,17 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.Dash;
+import com.google.android.gms.maps.model.Dot;
+import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.RoundCap;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -63,6 +71,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -81,7 +90,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private static final String COURSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     private static final int REQUEST_CHECK_SETTINGS = 4567;
-    private static final float DEFAULT_ZOOM = 16f;
+    private static final float DEFAULT_ZOOM = 17f;
 
     //vars
     private Boolean mLocationPermissionGranted = false;
@@ -91,6 +100,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private LocationCallback mLocationCallback;
     private MarkerModel markerModel;
     private ArrayList<CustomLatLng> markerList;
+    private CustomLatLng targetMark = null;
 
     //instance saved variables
     private static final String REQUESTING_LOCATION_UPDATES_KEY = "REQUESTING_LOCATION_UPDATES_KEY_SAVED";
@@ -145,30 +155,29 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             uiSettings.setMapToolbarEnabled(true);
             uiSettings.setZoomControlsEnabled(true);
             mMap.setMyLocationEnabled(true);
+            mMap.setBuildingsEnabled(true);
             mMap.setInfoWindowAdapter(new CustomInfoWindowAdaper(MapActivity.this));
             init();
 
-            //populating with map markers
-            populateMap();
         }
     }
 
-    private void populateMap(){
+    private void placeMarker(CustomLatLng customLatLng){
         mMap.clear();
         MarkerOptions options = new MarkerOptions()
-                .position(new LatLng(52.629381,-1.138030))
-                .title("GH - Gateway House")
-                .snippet("ablbalabllbalablba" + "\n" +
-                        "ablbalabllbalablba" + "\n" +
-                        "ablbalabllbalablba" + "\n");
+                .position(new LatLng(customLatLng.latitude,customLatLng.longitude))
+                .title(customLatLng.getTitle())
+                .snippet(customLatLng.getSnippet());
 
-        mMap.addMarker(options);
+        Marker m = mMap.addMarker(options);
+        m.setTag(customLatLng);
     }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
+        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         mGps = (ImageView) findViewById(R.id.ic_gps);
 
         //Initialize marker model
@@ -184,12 +193,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         buttonShowDropDown = (Button) findViewById(R.id.buttonShowDropDown);
 
+        mLocationCallback = new LocationCallback(){
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+                Log.i(TAG, "mLocationCallback: onLocationResult: location changed");
+
+            }
+        };
+
         //check permissions for locating this device
         getLocationPermission();
         //check if requesting location updates is paused and if so can simply resume updating
         if (savedInstanceState != null){
             updateValuesFromBundle(savedInstanceState);
         }
+
     }
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -209,7 +228,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         if (mRequestingLocationUpdates) {
             startLocationUpdates();
         }
-        clearPolylines();
+        //clearPolylines();
     }
     private void updateValuesFromBundle(Bundle savedInstanceState) {
         // Update the value of mRequestingLocationUpdates from the Bundle.
@@ -247,20 +266,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 }
             }
         });
-        mLocationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                for (Location location : locationResult.getLocations()) {
-                    // Update UI with location data
-                    // ...
-                    Log.d(TAG, "mLocationCallBack: onLocationResult: shit is moving around!");
-                    moveCamera(new LatLng(location.getLatitude(), location.getLongitude()), DEFAULT_ZOOM);
-                }
-            }
-        };
-        //hideSoftKeyboard();
+        periodicUpdate.run();
     }
-
 
     /**
      * Call this method to draw a polyline between current location and @param latLng.
@@ -270,7 +277,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private void showDirections(final CustomLatLng latLng){
         Log.d(TAG, "showDirections: method called");
 
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         try {
             if (mLocationPermissionGranted) {
 
@@ -294,6 +300,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         }
                     }
                 });
+
             }
         } catch (SecurityException e) {
             Log.e(TAG, "getDeviceLocation: SecurityException: " + e.getMessage());
@@ -302,9 +309,21 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 //        String url = getRequestUrl(new LatLng(location.getLatitude(), location.getLongitude()), latLng);
 //        TaskRequestDirections taskRequestDirections = new TaskRequestDirections();
 //        taskRequestDirections.execute(url);
-
-
     }
+
+    Handler handler = new Handler();
+    private Runnable periodicUpdate = new Runnable () {
+        @Override
+        public void run() {
+            // scheduled another events to be in 10 seconds later
+            Log.d(TAG, "periodicUpdate: run: called");
+            handler.postDelayed(periodicUpdate, 6000 );
+            if (targetMark != null && polyline != null) {
+                showDirections(targetMark);
+            }
+
+        }
+    };
     
     private String getRequestUrl(LatLng origin,CustomLatLng dest){
         //value of origin
@@ -314,7 +333,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         //set value enable the sensor
         String sensor = "sensor=false";
         //mode for find direction
-        String mode = "mode=driving";
+        String mode = "mode=walking";
         //build the full param
         String param = str_org + "&" + str_dest + "&" + sensor + "&" +mode;
         //Output format
@@ -362,7 +381,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     private void getDeviceLocation() {
         Log.d(TAG, "getDeviceLocation: get the current devices location");
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         try {
             if (mLocationPermissionGranted) {
@@ -440,17 +458,19 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         Log.d(TAG, "startLocationUpdates: retrieving location updates");
         if (ActivityCompat.checkSelfPermission(MapActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(MapActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            
-            mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest,
-                    mLocationCallback,
-                    null /* Looper */);
 
+            mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest,mLocationCallback, Looper.myLooper());
 
         }
     }
     private void stopLocationUpdates() {
         Log.d(TAG, "stopLocationUpdates: stop retrieving location updates");
-        mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
+        mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback).addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                Log.i(TAG, "stopLocationUpdates: onComplete called");
+            }
+        });
     }
 
     private void initMap(){
@@ -462,8 +482,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     private void moveCamera(LatLng latLng, float zoom){
         Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + "   lng: " + latLng.longitude );
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
-        hideSoftKeyboard();
+        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom), 1500, null);
     }
 
     //////////////////////////////////////
@@ -589,12 +609,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 }
 
                 polylineOptions.addAll(points);
-                polylineOptions.width(15);
-                polylineOptions.color(Color.BLUE);
+                polylineOptions.width(20);
+                polylineOptions.color(Color.CYAN);
                 polylineOptions.geodesic(true);
+                List<PatternItem> pattern = Arrays.asList(new Dot(), new Gap(20));
+                polylineOptions.pattern(pattern);
+                polylineOptions.endCap(new RoundCap());
             }
 
             if (polylineOptions!=null) {
+                clearPolylines();
                 polyline = mMap.addPolyline(polylineOptions);
 
             } else {
@@ -642,6 +666,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 for (CustomLatLng item : markerList) {
                     if (item.getTitle().contains(selectedItemTag)) {
                         showDirections(item);
+                        targetMark = item;
+                        placeMarker(item);
+                        moveCamera(new LatLng(item.latitude, item.longitude), DEFAULT_ZOOM);
                     }
                 }
             }

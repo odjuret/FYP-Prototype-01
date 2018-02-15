@@ -3,6 +3,7 @@ package jimjam.googlemapsgoogleplaces;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap;
@@ -37,6 +38,15 @@ public class CustomInfoWindowAdaper implements GoogleMap.InfoWindowAdapter{
         if (!snippet.equals("")) {
             tvSnippet.setText(snippet);
         }
+
+        String imageString = title.substring(0,2);
+        if (imageString.contains(" ")) {
+            imageString = imageString.substring(0, 1);
+        }
+        int imageId = mContext.getResources().getIdentifier(imageString.toLowerCase(),
+                "drawable", mContext.getPackageName());
+        ImageView icon = (ImageView) view.findViewById(R.id.icon);
+        icon.setImageResource(imageId);
     }
 
     @Override

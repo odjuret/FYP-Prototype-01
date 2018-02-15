@@ -8,6 +8,7 @@ public class CustomLatLng {
 
     private final String title;
     private final String snippet;
+    private String url;
     public final double latitude;
     public final double longitude;
 
@@ -27,11 +28,11 @@ public class CustomLatLng {
         return snippet;
     }
 
-    public double getLatitude() {
-        return latitude;
+    public String getUrl() {
+        return url;
     }
 
-    public double getLongitude() {
-        return longitude;
+    public void setUrl(String url) {
+        this.url = url;
     }
 }

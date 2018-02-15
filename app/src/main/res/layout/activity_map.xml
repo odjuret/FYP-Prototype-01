@@ -23,7 +23,7 @@
             android:paddingRight="10dp"
             android:elevation="10dp"
             android:background="@drawable/white_border"
-            android:text="Select Campus Building / Place"
+            android:text="@string/dropdown_prompt"
             android:drawableRight="@drawable/ic_dropdwon_arrow"
 
             />
