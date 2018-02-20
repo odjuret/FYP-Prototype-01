@@ -2,6 +2,8 @@ package jimjam.googlemapsgoogleplaces;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -15,8 +17,11 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -28,6 +33,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -114,6 +120,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         private PopupWindow popupWindow;
         private String popUpContents[];
 
+    //guided tour related
+    private Boolean touring = false;
+    private Integer counter = 0;
+    private CustomLatLng targetTourMark = null;
+    private Button nextButton;
+
 
     //methods
     @Override
@@ -149,16 +161,23 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 return;
             }
             UiSettings uiSettings = mMap.getUiSettings();
-            uiSettings.setAllGesturesEnabled(true);
             uiSettings.setCompassEnabled(true);
             uiSettings.setMyLocationButtonEnabled(false);
-            uiSettings.setMapToolbarEnabled(true);
             uiSettings.setZoomControlsEnabled(true);
             mMap.setMyLocationEnabled(true);
             mMap.setBuildingsEnabled(true);
             mMap.setInfoWindowAdapter(new CustomInfoWindowAdaper(MapActivity.this));
             init();
 
+            if (touring) {
+                buttonShowDropDown.setVisibility(View.GONE);
+                doTheTour();
+            } else {
+                nextButton.setVisibility(View.GONE);
+                uiSettings.setMapToolbarEnabled(true);
+                uiSettings.setAllGesturesEnabled(true);
+
+            }
         }
     }
 
@@ -192,6 +211,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         popupWindow = popupWindowMarkers();
 
         buttonShowDropDown = (Button) findViewById(R.id.buttonShowDropDown);
+        nextButton = (Button) findViewById(R.id.nextBtn);
 
         mLocationCallback = new LocationCallback(){
             @Override
@@ -209,6 +229,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             updateValuesFromBundle(savedInstanceState);
         }
 
+        Intent intent = getIntent();
+        Bundle bd = intent.getExtras();
+        if (bd != null) {
+            touring = (Boolean) bd.get("Tour");
+        }
+        Log.d(TAG, "onCreate: touring is " +touring.toString());
     }
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -266,8 +292,28 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 }
             }
         });
+        nextButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switch (v.getId()) {
+
+                    case R.id.nextBtn:
+                        // show the list view as dropdown
+                        Log.d(TAG, "nextButton: onClick: next item on tour");
+                        if (counter< (markerList.size()-1)) {
+                            counter++;
+                            onTheTour();
+                        } else {
+                            endTour();
+                        }
+
+                        break;
+                }
+            }
+        });
         periodicUpdate.run();
     }
+
 
     /**
      * Call this method to draw a polyline between current location and @param latLng.
@@ -648,7 +694,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 // add some animation when a list item was clicked
                 Animation fadeInAnimation = AnimationUtils.loadAnimation(v.getContext(), android.R.anim.fade_in);
-                fadeInAnimation.setDuration(10);
+                fadeInAnimation.setDuration(10000);
                 v.startAnimation(fadeInAnimation);
 
                 // dismiss the pop up
@@ -719,5 +765,93 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         };
 
         return adapter;
+    }
+
+
+
+
+    /*----------------------------- guided tour methods below ------------------------------------*/
+
+    private void doTheTour(){
+        Log.d(TAG, "doTheTour: tour started");
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(MapActivity.this);
+        builder.setMessage("Welcome to De Montfort University! \n Lets go on a tour around campus!");
+        builder.setPositiveButton("Yeah boi lez go!", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Log.d(TAG, "doTheTour: onClick: clicked");
+                dialog.dismiss();
+                onTheTour();
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.getWindow().getAttributes().windowAnimations = R.style.DialogTheme;
+        alertDialog.show();
+    }
+
+    public void onTheTour(){
+        Log.d(TAG, "onTheTour: called");
+
+        makeAdialog(markerList.get(counter));
+        targetMark = markerList.get(counter);
+
+
+
+        }
+
+    public void makeAdialog(CustomLatLng customLatLng){
+        Log.d(TAG, "makeAdialog: called.");
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(MapActivity.this);
+        builder.setMessage(customLatLng.getTourInfo());
+
+        LayoutInflater inflater = getLayoutInflater();
+        View dialoglayout = inflater.inflate(R.layout.custom_dialog, null);
+
+        String imageString = customLatLng.getTitle().substring(0,2);
+        if (imageString.contains(" ")) {
+            imageString = imageString.substring(0, 1);
+        }
+        Context mContext = this.getApplicationContext();
+        int imageId = mContext.getResources().getIdentifier(imageString.toLowerCase(),
+                "drawable", mContext.getPackageName());
+        ImageView icon = (ImageView) dialoglayout.findViewById(R.id.imageDialog);
+        icon.setImageResource(imageId);
+
+        builder.setView(dialoglayout);
+        builder.setPositiveButton("Yeah boi lez go!", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Log.d(TAG, "doTheTour: onClick: clicked");
+                dialog.dismiss();
+                showDirections(targetMark);
+                moveCamera(new LatLng(targetMark.latitude,targetMark.longitude), DEFAULT_ZOOM);
+                placeMarker(targetMark);
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.getWindow().getAttributes().windowAnimations = R.style.DialogTheme;
+        alertDialog.show();
+
+    }
+
+    private void endTour(){
+        Log.d(TAG, "endTour: called");
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(MapActivity.this);
+        builder.setMessage("Thank you for taking the tour! \n We hope you will enjoy your stay at \n De Montfort University");
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Log.d(TAG, "endTour: onClick: clicked");
+                dialog.dismiss();
+                targetMark = null;
+                clearPolylines();
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.getWindow().getAttributes().windowAnimations = R.style.DialogTheme;
+        alertDialog.show();
     }
 }

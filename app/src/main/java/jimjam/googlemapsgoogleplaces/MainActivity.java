@@ -69,10 +69,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void init(){
         Button btnMap = (Button) findViewById(R.id.btnMap);
+        Button btnTour = (Button) findViewById(R.id.btnTour);
         btnMap.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, MapActivity.class);
+                startActivity(intent);
+            }
+        });
+        btnTour.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, MapActivity.class);
+                intent.putExtra("Tour",true);
                 startActivity(intent);
             }
         });

@@ -5,24 +5,8 @@
     //buttons text/prompts
     <string name="dropdown_prompt">Select Campus Building / Place</string>
     <string name="main_button1">Manual Map View</string>
+    <string name="main_button2">Guided Campus Tour</string>
+    <string name="tour_button">Found it!</string>
 
-    <string-array name="building_arrays">
-        <item>DSU - Campus Centre Building</item>
-        <item>GH - Gateway House</item>
-        <item>building test 1</item>
-        <item>building test 2</item>
-        <item>building test 3</item>
-        <item>building test 4</item>
-        <item>building test 5</item>
-        <item>building test 6</item>
-        <item>Sweden Rulez</item>
-        <item>Sweden Rulez</item>
-        <item>Sweden Rulez</item>
-        <item>Sweden Rulez</item>
-        <item>Sweden Rulez</item>
-        <item>Sweden Rulez</item>
-        <item>Sweden Rulez</item>
-
-    </string-array>
 
 </resources>
