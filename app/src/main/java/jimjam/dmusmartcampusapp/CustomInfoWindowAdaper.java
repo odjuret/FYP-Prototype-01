@@ -1,4 +1,4 @@
-package jimjam.googlemapsgoogleplaces;
+package jimjam.dmusmartcampusapp;
 
 import android.content.Context;
 import android.view.LayoutInflater;

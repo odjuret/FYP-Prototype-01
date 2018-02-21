@@ -1,4 +1,4 @@
-package jimjam.googlemapsgoogleplaces.models;
+package jimjam.dmusmartcampusapp.models;
 
 /**
  * Created by Jimmie on 04/02/2018.
@@ -12,6 +12,7 @@ public class CustomLatLng {
     private String tourInfo;
     public final double latitude;
     public final double longitude;
+    private Boolean inTour = false;
 
 
     public CustomLatLng(double latitude, double longitude, String title, String snippet, String tourInfo) {
@@ -44,5 +45,13 @@ public class CustomLatLng {
 
     public void setTourInfo(String tourInfo) {
         this.tourInfo = tourInfo;
+    }
+
+    public void setInTour(Boolean bool){
+        this.inTour = bool;
+    }
+
+    public Boolean getInTour() {
+        return inTour;
     }
 }

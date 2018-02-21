@@ -1,4 +1,4 @@
-package jimjam.googlemapsgoogleplaces;
+package jimjam.dmusmartcampusapp;
 
 import com.google.android.gms.maps.model.LatLng;
 

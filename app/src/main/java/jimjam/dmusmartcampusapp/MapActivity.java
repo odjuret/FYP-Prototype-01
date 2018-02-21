@@ -1,4 +1,4 @@
-package jimjam.googlemapsgoogleplaces;
+package jimjam.dmusmartcampusapp;
 
 import android.Manifest;
 import android.content.Context;
@@ -20,7 +20,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,7 +32,6 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -51,7 +49,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
-import com.google.android.gms.maps.model.Dash;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
@@ -81,8 +79,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import jimjam.googlemapsgoogleplaces.models.CustomLatLng;
-import jimjam.googlemapsgoogleplaces.models.MarkerModel;
+import jimjam.dmusmartcampusapp.models.CustomLatLng;
+import jimjam.dmusmartcampusapp.models.MarkerModel;
 
 /**
  * Created by Jimmie on 26/01/2018.
@@ -106,6 +104,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private LocationCallback mLocationCallback;
     private MarkerModel markerModel;
     private ArrayList<CustomLatLng> markerList;
+    private ArrayList<CustomLatLng> markerTourList = new ArrayList<CustomLatLng>();
     private CustomLatLng targetMark = null;
 
     //instance saved variables
@@ -171,7 +170,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             if (touring) {
                 buttonShowDropDown.setVisibility(View.GONE);
+                for (CustomLatLng marker: markerList) {
+                    if (marker.getInTour()) {
+                        markerTourList.add(marker);
+                    }
+                }
                 doTheTour();
+                uiSettings.setMapToolbarEnabled(false);
             } else {
                 nextButton.setVisibility(View.GONE);
                 uiSettings.setMapToolbarEnabled(true);
@@ -186,10 +191,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         MarkerOptions options = new MarkerOptions()
                 .position(new LatLng(customLatLng.latitude,customLatLng.longitude))
                 .title(customLatLng.getTitle())
-                .snippet(customLatLng.getSnippet());
+                .snippet(customLatLng.getSnippet())
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker_custom));
 
         Marker m = mMap.addMarker(options);
         m.setTag(customLatLng);
+
     }
 
     @Override
@@ -204,6 +211,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         markerList = markerModel.getMarkerList();
         List<String> markerTitleList = markerModel.getMarkerTitles();
         Log.d(TAG, "onCreate: markerListTitles: " +markerTitleList.toString());
+
 
         //Initialize drop down menu and button for drop down menu
         popUpContents = new String[markerTitleList.size()];
@@ -300,7 +308,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     case R.id.nextBtn:
                         // show the list view as dropdown
                         Log.d(TAG, "nextButton: onClick: next item on tour");
-                        if (counter< (markerList.size()-1)) {
+                        if (counter< (markerTourList.size()-1)) {
                             counter++;
                             onTheTour();
                         } else {
@@ -776,7 +784,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         Log.d(TAG, "doTheTour: tour started");
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(MapActivity.this);
-        builder.setMessage("Welcome to De Montfort University! \n Lets go on a tour around campus!");
+        builder.setMessage("Welcome to De Montfort University! \nLets go on a tour around campus! " +
+                "\nWhen you find the place just click the button at the bottom of the screen " +
+                "to continue on with the tour" );
         builder.setPositiveButton("Yeah boi lez go!", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -793,8 +803,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public void onTheTour(){
         Log.d(TAG, "onTheTour: called");
 
-        makeAdialog(markerList.get(counter));
-        targetMark = markerList.get(counter);
+        makeAdialog(markerTourList.get(counter));
+        targetMark = markerTourList.get(counter);
 
 
 
@@ -840,7 +850,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         Log.d(TAG, "endTour: called");
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(MapActivity.this);
-        builder.setMessage("Thank you for taking the tour! \n We hope you will enjoy your stay at \n De Montfort University");
+        builder.setMessage("Thank you for taking the tour! \nWe hope you will enjoy your stay at \nDe Montfort University");
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -848,6 +858,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 dialog.dismiss();
                 targetMark = null;
                 clearPolylines();
+                mMap.clear();
             }
         });
         AlertDialog alertDialog = builder.create();
