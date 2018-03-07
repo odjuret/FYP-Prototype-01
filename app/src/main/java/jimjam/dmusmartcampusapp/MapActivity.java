@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -81,6 +83,7 @@ import java.util.List;
 
 import jimjam.dmusmartcampusapp.models.CustomLatLng;
 import jimjam.dmusmartcampusapp.models.MarkerModel;
+import jimjam.dmusmartcampusapp.models.MySqliteOpenHelper;
 
 /**
  * Created by Jimmie on 26/01/2018.
@@ -124,6 +127,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Integer counter = 0;
     private CustomLatLng targetTourMark = null;
     private Button nextButton;
+
+    //SQLite related variables below
+    private MySqliteOpenHelper mySqliteOpenHelper;
+    private SQLiteDatabase mDatabase;
+    private SQLiteDatabase mWriteAbleDB;
+
 
 
     //methods
@@ -206,10 +215,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         mGps = (ImageView) findViewById(R.id.ic_gps);
 
-        //Initialize marker model
-        markerModel = new MarkerModel();
-        markerList = markerModel.getMarkerList();
-        List<String> markerTitleList = markerModel.getMarkerTitles();
+        //Initialize database and marker model
+        initDB();
+        //markerModel = new MarkerModel();
+        //markerList = markerModel.getMarkerList();
+        ArrayList<String> markerTitleList = new ArrayList<String>();
+        for (CustomLatLng item: markerList) {
+            markerTitleList.add(item.getTitle());
+        }
+        //List<String> markerTitleList = markerModel.getMarkerTitles();
         Log.d(TAG, "onCreate: markerListTitles: " +markerTitleList.toString());
 
 
@@ -319,9 +333,46 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 }
             }
         });
+
         periodicUpdate.run();
     }
 
+    private void initDB(){
+        //database init
+
+        mySqliteOpenHelper = new MySqliteOpenHelper(getApplicationContext());
+        markerList = new ArrayList<>();
+        //populateDB();
+
+        mDatabase = mySqliteOpenHelper.getReadableDatabase();
+        Cursor cursor = mDatabase.rawQuery("select * from markers ;", null);
+        Log.d(TAG, "initDB: number of columns in DB: " + cursor.getColumnCount());
+        Log.d(TAG, "initDB: data in DB: " +cursor.getCount());
+        if (cursor.getCount() < 4) {
+            populateDB();
+        }
+        if (cursor.getCount() > 7) {
+            mWriteAbleDB = mySqliteOpenHelper.getWritableDatabase();
+            mWriteAbleDB.execSQL("delete from markers");
+        }
+
+        //read all the markers from the DB
+        while (cursor.moveToNext()) {
+            double lat = Double.parseDouble(cursor.getString(cursor.getColumnIndexOrThrow("latitude")));
+            double lon = Double.parseDouble(cursor.getString(cursor.getColumnIndexOrThrow("longitude")));
+            String title = cursor.getString(cursor.getColumnIndexOrThrow("title"));
+            String snippet = cursor.getString(cursor.getColumnIndexOrThrow("snippet"));
+            String tourinfo = cursor.getString(cursor.getColumnIndexOrThrow("tourinfo"));
+            CustomLatLng cll = new CustomLatLng(lat,lon,title, snippet, tourinfo);
+            if (!cll.getTitle().contains("5")) {
+                cll.setInTour(true);
+            }
+
+            markerList.add(cll);
+        }
+        cursor.close();
+
+    }
 
     /**
      * Call this method to draw a polyline between current location and @param latLng.
@@ -369,7 +420,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Runnable periodicUpdate = new Runnable () {
         @Override
         public void run() {
-            // scheduled another events to be in 10 seconds later
             Log.d(TAG, "periodicUpdate: run: called");
             handler.postDelayed(periodicUpdate, 6000 );
             if (targetMark != null && polyline != null) {
@@ -542,7 +592,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     //////////////////////////////////////
     // initial permission request methods.
-    private void getLocationPermission(){
+    public void getLocationPermission(){
         Log.d(TAG,"getLocationPermission: getting location permissions");
         String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
                                 Manifest.permission.ACCESS_COARSE_LOCATION};
@@ -677,6 +727,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             } else {
                 Log.d(TAG, "TaskParser: onPostExecute: directions not found");
+                if (targetMark!=null) {
+                    showDirections(targetMark);
+                }
             }
         }
     }
@@ -795,6 +848,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 onTheTour();
             }
         });
+        builder.setCancelable(false);
         AlertDialog alertDialog = builder.create();
         alertDialog.getWindow().getAttributes().windowAnimations = R.style.DialogTheme;
         alertDialog.show();
@@ -830,7 +884,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         icon.setImageResource(imageId);
 
         builder.setView(dialoglayout);
-        builder.setPositiveButton("Yeah boi lez go!", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 Log.d(TAG, "doTheTour: onClick: clicked");
@@ -840,6 +894,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 placeMarker(targetMark);
             }
         });
+        builder.setCancelable(false);
         AlertDialog alertDialog = builder.create();
         alertDialog.getWindow().getAttributes().windowAnimations = R.style.DialogTheme;
         alertDialog.show();
@@ -859,10 +914,57 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 targetMark = null;
                 clearPolylines();
                 mMap.clear();
+                finish();
             }
         });
+        builder.setCancelable(false);
         AlertDialog alertDialog = builder.create();
         alertDialog.getWindow().getAttributes().windowAnimations = R.style.DialogTheme;
         alertDialog.show();
+    }
+
+    private void populateDB(){
+        Log.d(TAG, "populateDB: called");
+        mySqliteOpenHelper.addRow("52.629682", "-1.138504", "CC - Campus Centre::1",
+                "DMU Students' Union."+"\n" +"DMU Supplies Shop." +"\n" +"Food and Drinks.",
+                "A great place to start the tour is at the Campus Centre building. " +
+                        "The home of De Montfort Students' Union (DSU), Campus Centre is the hub for student life. " +
+                        "On the ground floor, visitors can eat or drink at a café selling Starbucks coffee, at Subway or at Milly Lane’s");
+
+        mySqliteOpenHelper.addRow("52.629381","-1.138030", "GH - Gateway House::2",
+                "The Student Gateway." +"\n" +"Information and Help." +"\n"
+                        +"Finance Office." +"\n" +"Faculty of Technology Home." +"\n" +"Computer Labs." +"\n",
+                "Next stop is the Gateway House where the student gateway is located. This is a central hub of activity for Technology students. " +
+                        "it is home to the Student Gateway, the Graduate School Office and the Faculty of Technology Advice Centre. " +
+                        "The Student Gateway offers information, advice and guidance on a wide range of topics such as finance and welfare, " +
+                        "jobs and careers, disability issues, counselling, mental health and wellbeing.");
+
+        mySqliteOpenHelper.addRow("52.629777","-1.139679",
+                "VP - Vijay Patel Building::3","Art & Design Courses." +"\n" +"DMU Food Village." +"\n"
+                        +"Riverside Cafe.",
+                "DMU's new Vijay Patel Building, home to art and design courses, " +
+                        "is the centrepiece of the £136 million Campus Transformation Project which will, " +
+                        "providing DMU with one of the finest campuses in the country.");
+
+        mySqliteOpenHelper.addRow("52.630757","-1.137346",
+                "CH - Clephan Building::4","Humanities Courses." +"\n" +"Cultural Exchanges Festival."
+                        +"\n" +"Sports History and Culture.",
+                "Home to the humanities subjects at DMU, Clephan has the latest audio-visual equipment and cinema screens. " +
+                        "Clephan hosts the annual DMU Cultural Exchanges Festival and houses the Leicester Centre for Creative Writing, " +
+                        "the Centre for Textual Studies, the Centre for Adaptations and the International Centre for Sports History and Culture.");
+
+        mySqliteOpenHelper.addRow("52.629220","-1.139771",
+                "Q  - Queens Building::5","Technology." +"\n" +"School of Engineering." +"\n"
+                        +"Centre of Sustainable Energy." +"\n" +"Leicester Media School.",
+                "If you can read this message then the author of this app has 'fucked shit up'");
+
+        mySqliteOpenHelper.addRow("52.629015", "-1.139162",
+                "KL - Kimberlin Library::6", "Main library of DMU \n" + "+1500 study places \n"
+                        +"650+ computer workstations \n" +"Open 24/7",
+                "Kimberlin Library is at the heart of the student learning experience, both as a physical resource and a " +
+                        "virtual online service that is accessible anywhere online. During term time it is open 24 hours a day, " +
+                        "seven days a week, giving you access to more than half a million publications and a wide range of DVDs, " +
+                        "as well as e-resources and thousands of electronic journals. We have 1,500 study places and 650 computer " +
+                        "workstations across four sites on campus.");
     }
 }

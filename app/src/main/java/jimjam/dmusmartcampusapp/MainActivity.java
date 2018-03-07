@@ -1,8 +1,15 @@
 package jimjam.dmusmartcampusapp;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.database.sqlite.SQLiteDatabase;
+import android.os.Handler;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,12 +26,20 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 
+
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback{
 
     private static final String TAG = "MainActivity";
     private GoogleMap mainMap;
+    private Boolean mLocationPermissionGranted = false;
 
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     private static final int ERROR_DIALOG_REQUEST = 9001;
+    private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
+    private static final String COURSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
+
+
+
 
     @Override
     public void onMapReady(GoogleMap googleMap){
@@ -47,6 +62,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Log.e(TAG, "Can't find style. Error: ", e);
         }
 
+        periodicUpdate.run();
     }
 
     private void initMap(){
@@ -61,8 +77,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_main);
 
         if (isServicesOK()){
+
             init();
             initMap();
+            getLocationPermission();
+
         }
     }
 
@@ -84,7 +103,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 startActivity(intent);
             }
         });
+
     }
+
+    Handler handler = new Handler();
+    private Runnable periodicUpdate = new Runnable () {
+        @Override
+        public void run() {
+            Log.d(TAG, "periodicUpdate: run: called");
+            handler.postDelayed(periodicUpdate, 10000 );
+            mainMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(52.629713, -1.138955), 16f), 1500, null);
+
+        }
+    };
     
     public boolean isServicesOK(){
         Log.d(TAG, "isServicesOK: checking google services version");
@@ -105,5 +136,52 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Toast.makeText(this, "you cant make map requests", Toast.LENGTH_SHORT).show();
         }
         return false;
+    }
+
+    //////////////////////////////////////
+    // initial permission request methods.
+    public void getLocationPermission(){
+        Log.d(TAG,"getLocationPermission: getting location permissions");
+        String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION};
+
+        //loop below to ensure not crashing on inital permission fail
+        while (!mLocationPermissionGranted){
+            if (ContextCompat.checkSelfPermission(this.getApplicationContext(), FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+                if (ContextCompat.checkSelfPermission(this.getApplicationContext(), COURSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+                    mLocationPermissionGranted = true;
+                }else {
+                    ActivityCompat.requestPermissions(this,
+                            permissions,
+                            LOCATION_PERMISSION_REQUEST_CODE);
+                }
+            }else {
+                ActivityCompat.requestPermissions(this,
+                        permissions,
+                        LOCATION_PERMISSION_REQUEST_CODE);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        Log.d(TAG,"onRequestPermissionResults: called.");
+        mLocationPermissionGranted = false;
+
+        switch (requestCode){
+            case LOCATION_PERMISSION_REQUEST_CODE:{
+                if (grantResults.length > 0){
+                    for (int i =0; i < grantResults.length; i++){
+                        if (grantResults[i] != PackageManager.PERMISSION_GRANTED){
+                            mLocationPermissionGranted = false;
+                            Log.d(TAG,"onRequestPermissionResults: permission FAILED.");
+                            return;
+                        }
+                    }
+                    Log.d(TAG,"onRequestPermissionResults: permission GRANTED");
+                    mLocationPermissionGranted = true;
+                }
+            }
+        }
     }
 }
