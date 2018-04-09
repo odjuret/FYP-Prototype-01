@@ -7,7 +7,18 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 /**
- * Created by Jimmie on 06/03/2018.
+ * <p>Database handler class. Handles creation, version control and transactions of databases.
+ * Will create a local folder storing text files representing databases and
+ * tables contained within. Folder is unreachable to a unmodified Android operating system, the majority of users
+ * can not access it. A arbitrary database solution for the purpose of this project.</p>
+ *
+ * <p>When an instance of this class is created the onCreate method is called. Creating the local
+ * database folders and files.</p>
+ *
+ * <p class="note"><strong>Note:</strong> this class assumes
+ * monotonically increasing version numbers for upgrades.</p>
+ *
+ * @author Jimmie / p15241925
  */
 
 public class MySqliteOpenHelper extends SQLiteOpenHelper {
@@ -31,22 +42,59 @@ public class MySqliteOpenHelper extends SQLiteOpenHelper {
                     + "  );";
 
 
+    /**
+     * default constructor. calls the super SQLiteOpenHelper constructor.
+     * Below info taken from said constructor:
+     *
+     * "Create a helper object to create, open, and/or manage a database.
+     * This method always returns very quickly.  The database is not actually
+     * created or opened until one of {@link #getWritableDatabase} or
+     * {@link #getReadableDatabase} is called."
+     *
+     * database_version is the version number of the database (starting at 1); if the database is older,
+     *     {@link #onUpgrade} will be used to upgrade the database
+     *
+     * @param context       the applications context
+     */
     public MySqliteOpenHelper(Context context){
         super(context, database_name, null, database_version);
     }
 
+    /**
+     * called the first time the database is created.
+     *
+     * @param db        the database to be created.
+     */
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(database_create_statement);
     }
 
+    /**
+     * Upon instantiation of this class. If an existing database with the same name exists it will
+     * check the version number and discard older version to create a new updated version.
+     *
+     *
+     * @param db                The database to be checked
+     * @param oldVersion        old version of database
+     * @param newVersion        new version of database
+     */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS "+ table_name + ";" );
         onCreate(db);
     }
 
-
+    /**
+     * populate the markers table with a row. 1 row represents 1 CustomLatLng object.
+     *
+     * @param lat           latitude coordinates as a string
+     * @param lon           longitude coordinates as aatring
+     * @param titlle        title of the marker
+     * @param snippet       marker snippet information
+     * @param tinfo         touring popup window information
+     * @return              .insert method will return -1 if unsuccessful
+     */
     public boolean addRow(String lat, String lon, String titlle, String snippet, String tinfo){
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();

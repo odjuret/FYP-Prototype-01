@@ -11,15 +11,25 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * Created by Jimmie on 02/02/2018.
+ * <p>This class is used to parse a JSON object into something java usable.
+ * the JSON object contains a lot of data fields and arrays related to the coordinates given.
+ * The coordinates 3 tier nested inside the JSON object are encoded into a single string for
+ * each route and "leg" and needs to be decoded.</p>
  *
- * Note that the method decodePolyline is taken from:
- * Source : http://jeffreysambells.com/2010/05/27/decoding-polylines-from-google-maps-direction-api-with-java
+ *
+ * <p class="note"><strong>Note:</strong> that the method decodePolyline is taken from:
+ * Source : http://jeffreysambells.com/2010/05/27/decoding-polylines-from-google-maps-direction-api-with-java </p>
  */
 
 public class DirectionsParser {
+
     /**
-     * Returns a list of lists containing latitude and longitude from a JSONObject
+     * A JSON parse method to pick apart the JSON document and cherry pick the parts
+     * useful for this application. This is needed since the desired polyline is nested inside
+     * a few json arrays. each tier of these arrays contains optional but useful information.
+     *
+     * @param jObject       a JSON object from google maps directions web api.
+     * @return              a list with all the desired JSON arrays: routes, legs and steps.
      */
     public List<List<HashMap<String, String>>> parse(JSONObject jObject) {
 
@@ -68,8 +78,13 @@ public class DirectionsParser {
     }
 
     /**
-     * Method to decode polyline
+     * Method to decode polyline since the polyline coordinates are encoded using a lossy compression algortihm.
+     * This way allows for series of coordinates to be stored into a single string.
      * Source : http://jeffreysambells.com/2010/05/27/decoding-polylines-from-google-maps-direction-api-with-java
+     *
+     * @author              Jeffrey Sambells
+     * @param encoded       The polyline points in JSON style to be decoded into LatLng objects.
+     * @return              ArrayList<LatLng> each LatLng represents one mark on the polyline.
      */
     private List decodePolyline(String encoded) {
 

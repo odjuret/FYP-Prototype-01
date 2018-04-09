@@ -10,7 +10,10 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Marker;
 
 /**
- * Created by Jimmie on 02/02/2018.
+ * <p>Adapter for the view window intended to be used as the info window to appear when markers are
+ * clicked on the google map.</p>
+ *
+ * @author Jimmie / p15241925
  */
 
 public class CustomInfoWindowAdaper implements GoogleMap.InfoWindowAdapter{

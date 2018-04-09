@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -21,6 +22,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -86,47 +88,66 @@ import jimjam.dmusmartcampusapp.models.MarkerModel;
 import jimjam.dmusmartcampusapp.models.MySqliteOpenHelper;
 
 /**
- * Created by Jimmie on 26/01/2018.
+ * <p><strong>The Main interactive activity</strong>
+ * The controller of the appplication as a whole.
+ * Here the SQLite database is created and filled with info if it
+ * does not already exists using {@Link #initDB}.
+ * The application will, after init methods are called, check if it has
+ * permissions to locate device.
+ * If {@Link #targetMark} is set then a polyline will be drawn on the map between
+ * the device current location and the target mark.
+ * Polylines are drawn using {@Link #showDirections} which in turn uses many methods and inner
+ * classes, one of these {@Link #requestDirections} connects to a web api using http connection,
+ * this is why this application needs internet permission.
+ * Redraws the polyline every 6 seconds using the runnable {@Link #periodicUpdate}
+ * which recursively calls itself after a set delay. </p>
+ *
+ * @author Jimmie / p15241925
+ *
  */
 
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {
 
+    //debugging related vars
     private static final String TAG = "MapActivity";
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
 
+    //permission related vars
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
     private static final String COURSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     private static final int REQUEST_CHECK_SETTINGS = 4567;
-    private static final float DEFAULT_ZOOM = 17f;
 
-    //vars
+    //main map and location vars
+    private static final float DEFAULT_ZOOM = 17f;
     private Boolean mLocationPermissionGranted = false;
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private LocationRequest mLocationRequest = new LocationRequest();
     private LocationCallback mLocationCallback;
-    private MarkerModel markerModel;
     private ArrayList<CustomLatLng> markerList;
-    private ArrayList<CustomLatLng> markerTourList = new ArrayList<CustomLatLng>();
+
+    //the current "target" to guide the user towards and draw polylines to.
     private CustomLatLng targetMark = null;
 
     //instance saved variables
+    /* if mRequestingLocationUpdates is true then this wont check for locate device permissions
+     */
     private static final String REQUESTING_LOCATION_UPDATES_KEY = "REQUESTING_LOCATION_UPDATES_KEY_SAVED";
     private Boolean mRequestingLocationUpdates = false;
 
     //widgets
     private ImageView mGps;
-    private Polyline polyline = null;
+    public Polyline polyline = null;
         //dropdown menu
         private Button buttonShowDropDown;
         private PopupWindow popupWindow;
         private String popUpContents[];
 
     //guided tour related
-    private Boolean touring = false;
+    private Boolean touring = false; //true if user clicks guided tour in MainActivity
     private Integer counter = 0;
-    private CustomLatLng targetTourMark = null;
     private Button nextButton;
+    private ArrayList<CustomLatLng> markerTourList = new ArrayList<CustomLatLng>(); //null unless touring is true
 
     //SQLite related variables below
     private MySqliteOpenHelper mySqliteOpenHelper;
@@ -136,9 +157,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
 
     //methods
+
+    /**
+     * After initMap has successfully acquired and synced the map the onMapReady callback is called.
+     * A custom map generated on https://mapstyle.withgoogle.com/ is loaded.
+     * Generic GoogleMap buttons and settings setup, some are adjusted depending if {@Link #touring}
+     * variable is true or false.
+     *
+     * @param googleMap         the ready map in use in fragment.
+     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        Toast.makeText(this, "Map is Ready", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "Map is Ready", Toast.LENGTH_SHORT).show();
         Log.d(TAG, "onMapReady: map is ready");
         mMap = googleMap;
 
@@ -195,35 +225,28 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-    private void placeMarker(CustomLatLng customLatLng){
-        mMap.clear();
-        MarkerOptions options = new MarkerOptions()
-                .position(new LatLng(customLatLng.latitude,customLatLng.longitude))
-                .title(customLatLng.getTitle())
-                .snippet(customLatLng.getSnippet())
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker_custom));
+    /*------------------------- common activity related methods -----------------------------------*/
 
-        Marker m = mMap.addMarker(options);
-        m.setTag(customLatLng);
-
-    }
-
+    /**
+     * common onCreate. defines what will happen upon creation of this activity.
+     *
+     * @param savedInstanceState    saved instance state if there is one.
+     */
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_map);
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         mGps = (ImageView) findViewById(R.id.ic_gps);
 
-        //Initialize database and marker model
+        //Initialize database
         initDB();
-        //markerModel = new MarkerModel();
-        //markerList = markerModel.getMarkerList();
+        //database fills markerList
         ArrayList<String> markerTitleList = new ArrayList<String>();
         for (CustomLatLng item: markerList) {
             markerTitleList.add(item.getTitle());
         }
-        //List<String> markerTitleList = markerModel.getMarkerTitles();
         Log.d(TAG, "onCreate: markerListTitles: " +markerTitleList.toString());
 
 
@@ -239,8 +262,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
-                Log.i(TAG, "mLocationCallback: onLocationResult: location changed");
+                //why the hell is this callback function not called???
 
+                Log.i(TAG, "mLocationCallback: onLocationResult: location changed");
+                Log.d(TAG, "onLocationResult: onLocationResult: location changed");
             }
         };
 
@@ -265,6 +290,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         // ...
         super.onSaveInstanceState(outState);
     }
+    private void updateValuesFromBundle(Bundle savedInstanceState) {
+        // Update the value of mRequestingLocationUpdates from the Bundle.
+        if (savedInstanceState.keySet().contains(REQUESTING_LOCATION_UPDATES_KEY)) {
+            mRequestingLocationUpdates = savedInstanceState.getBoolean(
+                    REQUESTING_LOCATION_UPDATES_KEY);
+        }
+    }
     @Override
     protected void onPause() {
         super.onPause();
@@ -278,21 +310,39 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
         //clearPolylines();
     }
-    private void updateValuesFromBundle(Bundle savedInstanceState) {
-        // Update the value of mRequestingLocationUpdates from the Bundle.
-        if (savedInstanceState.keySet().contains(REQUESTING_LOCATION_UPDATES_KEY)) {
-            mRequestingLocationUpdates = savedInstanceState.getBoolean(
-                    REQUESTING_LOCATION_UPDATES_KEY);
-        }
 
-        // ...
-
-        // Update UI to match restored state
-        // updateUI();
+    /**
+     * This application will handle orientation and screensize changes itself by calling
+     * this callback, see: AndroidManifest.xml ->  android:configChanges="orientation|screenSize"
+     * This is considered somewhat of a bad practice according to developer.android.com, see
+     * https://developer.android.com/guide/topics/resources/runtime-changes.html
+     *
+     * @param newConfig Configuration class containign data on the new configuration chjanges.
+     */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        //do something when the config mentioned in the manifest changes.
     }
+
+    /* ---------------------------- initialization methods ---------------------------------------*/
+    /**
+     * Method for calling getMapAsync.
+     * "A GoogleMap must be acquired using getMapAsync(OnMapReadyCallback).
+     * This class automatically initializes the maps system and the view." - taken from API page on MapFragment.
+     */
+    private void initMap(){
+        Log.d(TAG,"initMap: initializing map");
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        mapFragment.getMapAsync(MapActivity.this);
+        //mapFragment.setRetainInstance(true);
+    }
+
+    /**
+     * Initializes interactive components. And starts the periodic update runnable.
+     */
     private void init(){
         Log.d(TAG, "init: initializing");
-
 
         mGps.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -328,7 +378,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         } else {
                             endTour();
                         }
-
                         break;
                 }
             }
@@ -337,6 +386,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         periodicUpdate.run();
     }
 
+    /**
+     * Initializes the database. If database is empty it will populate it.
+     * Fills the markerList with data from database as CustomLatLng objects
+     */
     private void initDB(){
         //database init
 
@@ -374,19 +427,19 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
+    /* ----------------------- polyline/directions related methods & classes ----------------------*/
     /**
      * Call this method to draw a polyline between current location and @param latLng.
      * A polyline being the calculated best travel route by google places API.
      * @param latLng        Destinations Lat Long object
      */
-    private void showDirections(final CustomLatLng latLng){
+    public void showDirections(final CustomLatLng latLng){
         Log.d(TAG, "showDirections: method called");
 
         try {
             if (mLocationPermissionGranted) {
 
                 Task location = mFusedLocationProviderClient.getLastLocation();
-
                 location.addOnCompleteListener(new OnCompleteListener() {
                     @Override
                     public void onComplete(@NonNull Task task) {
@@ -394,28 +447,26 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             Log.d(TAG, "showDirections: onComplete: found location!");
 
                             Location currentLocation = (Location) task.getResult();
-
                             String url = getRequestUrl(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), latLng);
                             TaskRequestDirections taskRequestDirections = new TaskRequestDirections();
                             taskRequestDirections.execute(url);
                         } else {
                             Log.d(TAG, "showDirections: onComplete: last known location is null");
                             Toast.makeText(MapActivity.this, "unable to get last know current location", Toast.LENGTH_SHORT).show();
-
                         }
                     }
                 });
-
             }
         } catch (SecurityException e) {
             Log.e(TAG, "getDeviceLocation: SecurityException: " + e.getMessage());
         }
-
-//        String url = getRequestUrl(new LatLng(location.getLatitude(), location.getLongitude()), latLng);
-//        TaskRequestDirections taskRequestDirections = new TaskRequestDirections();
-//        taskRequestDirections.execute(url);
     }
 
+    /**
+     * A runnable which recursively calls itself after a delay.
+     * acts as a update method for the directions polyline.
+     * DO NOTE: that this way of doing this has only been briefly tested with arbitrary results.
+     */
     Handler handler = new Handler();
     private Runnable periodicUpdate = new Runnable () {
         @Override
@@ -425,10 +476,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             if (targetMark != null && polyline != null) {
                 showDirections(targetMark);
             }
-
         }
     };
-    
+
+    /**
+     * This method acts as a factory to construct a correct string representing the url
+     * needed for connecting to the google maps web api that retrieves the directions (polyline).
+     * Used by {@Link #showDirections}.
+     *
+     * @param origin    original user location.
+     * @param dest      destination user location.
+     * @return          the finished string to use as url for http connecting to the web api.
+     */
     private String getRequestUrl(LatLng origin,CustomLatLng dest){
         //value of origin
         String str_org = "origin=" +origin.latitude +"," +origin.longitude;
@@ -447,6 +506,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return url;
     }
 
+    /**
+     * Queries the google maps web api.
+     *
+     * @param reqUrl            url string created by {@Link #getRequestUrl}
+     * @return                  the returned response represented as a string, either a JSON or XML object.
+     *                          needs to be parsed to make sense of.
+     * @throws IOException      error message if http connection fails.
+     */
     private String requestDirection(String reqUrl) throws IOException {
         String responseString = "";
         InputStream inputStream = null;
@@ -483,6 +550,139 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return responseString;
     }
 
+
+    /**
+     * Inner class used by showDirections method(). Queries the googlemaps web api
+     * using the local requestDirection class.
+     * Extends AsyncTask so the requests and polyline drawing on the map can be done without
+     * pausing the application / interrupting the user experience.
+     */
+    public class TaskRequestDirections extends AsyncTask<String, Void, String>{
+
+        /**
+         * Override this method to perform a computation on a background thread.
+         * The specified parameters are the parameters passed to execute by the caller of this task.
+         * This method can call publishProgress to publish updates on the UI thread.
+         *
+         * @param strings   the url string generated by {@Link #getRequestUrl}
+         * @return          the returned response represented as a string, either a JSON or XML object.
+         *                  needs to be parsed to make sense of.
+         */
+        @Override
+        protected String doInBackground(String... strings) {
+            Log.d(TAG, "TaskRequestDirections: doInBackground: called");
+            String responseString = "";
+
+            try {
+                responseString = requestDirection(strings[0]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return responseString;
+        }
+
+        /**
+         * Runs on the UI thread after doInBackground.
+         * The specified result is the value returned by doInBackground.
+         *
+         * @param s     the result returned by doInBackground
+         */
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            //Parse json here
+            TaskParser taskParser = new TaskParser();
+            taskParser.execute(s);
+        }
+    }
+
+    /**
+     * This inner class opens up a thread to handle the {@Link #DirectionsParser} class.
+     * Parse the JSON objects arrays and nested arrays into lists and hashmaps.
+     *
+     * Extends AsyncTask so the requests and polyline drawing on the map can be done without
+     * pausing the application / interrupting the user experience.
+     */
+    public class TaskParser extends AsyncTask<String, Void, List<List<HashMap<String, String>>> > {
+
+        /**
+         * Overriden method to perform a computation on a background thread.
+         * The specified parameters are the parameters passed to execute by the caller of this task.
+         * This method can call publishProgress to publish updates on the UI thread.
+         *
+         * @param strings   the string generated by {@Link #TaskRequestDirections}.
+         * @return          the returned response represents the arrays and nested arrays from the
+         *                  JSON object as lists and hashmaps.
+         */
+        @Override
+        protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
+            JSONObject jsonObject = null;
+            List<List<HashMap<String, String>>> routes = null;
+            try {
+                jsonObject = new JSONObject(strings[0]);
+                DirectionsParser directionsParser = new DirectionsParser();
+                routes = directionsParser.parse(jsonObject);
+            } catch (JSONException e) {
+                Log.d(TAG, "TaskParser: doInBackground: " + e.getMessage());
+
+            }
+            return routes;
+        }
+
+        /**
+         * Runs on the UI thread after doInBackground.
+         * The specified result is the value returned by doInBackground.
+         *
+         * @param lists
+         */
+        @Override
+        protected void onPostExecute(List<List<HashMap<String, String>>> lists) {
+            //get list route and display it into the map
+
+            ArrayList points = null;
+
+            PolylineOptions polylineOptions = null;
+
+            for (List<HashMap<String, String>> path : lists) {
+                points = new ArrayList();
+                polylineOptions = new PolylineOptions();
+
+                for (HashMap<String, String> point : path) {
+                    double lat = Double.parseDouble(point.get("lat"));
+                    double lon = Double.parseDouble(point.get("lon"));
+
+                    points.add(new LatLng(lat, lon));
+                }
+
+                polylineOptions.addAll(points);
+                polylineOptions.width(25);
+                polylineOptions.color(Color.CYAN);
+                polylineOptions.geodesic(true);
+                List<PatternItem> pattern = Arrays.asList(new Dot(), new Gap(20));
+                polylineOptions.pattern(pattern);
+                polylineOptions.endCap(new RoundCap());
+                polylineOptions.startCap(new RoundCap());
+            }
+
+            if (polylineOptions!=null) {
+                clearPolylines();
+                polyline = mMap.addPolyline(polylineOptions);
+
+            } else {
+                Log.d(TAG, "TaskParser: onPostExecute: directions not found");
+                if (targetMark!=null) {
+                    showDirections(targetMark);
+                }
+            }
+        }
+    }
+
+    /*------------------------------- Location related methods below ------------------------------*/
+
+    /**
+     *  Retrieves the current locations langitude and longitude coordinates.
+     *  DO NOTE: that this could easily be modified to return a LatLng object.
+     */
     private void getDeviceLocation() {
         Log.d(TAG, "getDeviceLocation: get the current devices location");
 
@@ -490,7 +690,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             if (mLocationPermissionGranted) {
 
                 Task location = mFusedLocationProviderClient.getLastLocation();
-
                 location.addOnCompleteListener(new OnCompleteListener() {
                     @Override
                     public void onComplete(@NonNull Task task) {
@@ -502,7 +701,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         } else {
                             Log.d(TAG, "onComplete: last known location is null");
                             Toast.makeText(MapActivity.this, "unable to get last know current location", Toast.LENGTH_SHORT).show();
-
                         }
                     }
                 });
@@ -512,6 +710,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
+    /**
+     * A method to prepare retrieval of coordinates for this device periodically.
+     * Requests settings have to be prepared and checked for validity before use.
+     * If settings return valid then {@Link #startLocationUpdates} should be called.
+     */
     protected void createLocationRequest() {
         Log.d(TAG, "createLocationRequest: creating location request");
 
@@ -531,7 +734,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 // All location settings are satisfied. The client can initialize
                 // location requests here.
-                // ...
+
                 mRequestingLocationUpdates = true;
                 startLocationUpdates();
             }
@@ -558,6 +761,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         });
     }
 
+    /**
+     * starts the periodical retrieval of new locations of this device
+     */
     private void startLocationUpdates() {
         Log.d(TAG, "startLocationUpdates: retrieving location updates");
         if (ActivityCompat.checkSelfPermission(MapActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
@@ -567,6 +773,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         }
     }
+
+    /**
+     * stops the periodical retrieval of new locations of device
+     */
     private void stopLocationUpdates() {
         Log.d(TAG, "stopLocationUpdates: stop retrieving location updates");
         mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback).addOnCompleteListener(new OnCompleteListener<Void>() {
@@ -577,21 +787,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         });
     }
 
-    private void initMap(){
-        Log.d(TAG,"initMap: initializing map");
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-
-        mapFragment.getMapAsync(MapActivity.this);
-    }
-
-    private void moveCamera(LatLng latLng, float zoom){
-        Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + "   lng: " + latLng.longitude );
-        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom), 1500, null);
-    }
-
-    //////////////////////////////////////
-    // initial permission request methods.
+    ////////////////////////////////////////////
+    // initial permission request methods below.
+    /**
+     * Checks if this application has permission to retrieve the location of this device.
+     * If not then request permissions from the user using requestPermissions.
+     */
     public void getLocationPermission(){
         Log.d(TAG,"getLocationPermission: getting location permissions");
         String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
@@ -616,6 +817,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
+    /**
+     * callback method from {@Link #getLocationPermission} failed checks.
+     *
+     * @param requestCode       as passed in getLocationPermission, should be: LOCATION_PERMISSION_REQUEST_CODE.
+     * @param permissions       the permissions requested.
+     * @param grantResults      The grant results for the corresponding permissions which is either
+     *                          android.content.pm.PackageManager.PERMISSION_GRANTED or
+     *                          android.content.pm.PackageManager.PERMISSION_DENIED. Never null.
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         Log.d(TAG,"onRequestPermissionResults: called.");
@@ -640,117 +850,67 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-    private void hideSoftKeyboard(){
-        //this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+    /*------------------------------ map visuals related methods ---------------------------------- */
+
+    /**
+     * A custom addMarker method using the custom marker picture.
+     *
+     * @param customLatLng  the marker to be placed upon the map.
+     */
+    private void placeMarker(CustomLatLng customLatLng){
+        mMap.clear();
+        MarkerOptions options = new MarkerOptions()
+                .position(new LatLng(customLatLng.latitude,customLatLng.longitude))
+                .title(customLatLng.getTitle())
+                .snippet(customLatLng.getSnippet())
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker_custom));
+
+        Marker m = mMap.addMarker(options);
+        m.setTag(customLatLng);
     }
+
+    /**
+     * clear the map of polylines.
+     */
     private void clearPolylines(){
         if (polyline != null) {
             polyline.remove();
         }
-
     }
 
-    /* ----------------------------- inner classes below -----------------------------------------  */
-
-    public class TaskRequestDirections extends AsyncTask<String, Void, String>{
-
-        @Override
-        protected String doInBackground(String... strings) {
-            Log.d(TAG, "TaskRequestDirections: doInBackground: called");
-            String responseString = "";
-
-            try {
-                responseString = requestDirection(strings[0]);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return responseString;
-        }
-
-        @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-            //Parse json here
-            TaskParser taskParser = new TaskParser();
-            taskParser.execute(s);
-        }
+    /**
+     * Method to move the camera.
+     *
+     * @param latLng    latitude and longitude coordinates to center camera on
+     * @param zoom      the level of zoom to center the map upon.
+     */
+    private void moveCamera(LatLng latLng, float zoom){
+        Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + "   lng: " + latLng.longitude );
+        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom), 1500, null);
     }
 
-    public class TaskParser extends AsyncTask<String, Void, List<List<HashMap<String, String>>> > {
-
-        @Override
-        protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
-            JSONObject jsonObject = null;
-            List<List<HashMap<String, String>>> routes = null;
-            try {
-                jsonObject = new JSONObject(strings[0]);
-                DirectionsParser directionsParser = new DirectionsParser();
-                routes = directionsParser.parse(jsonObject);
-            } catch (JSONException e) {
-                Log.d(TAG, "TaskParser: doInBackground: " + e.getMessage());
-
-            }
-            return routes;
-        }
-
-        @Override
-        protected void onPostExecute(List<List<HashMap<String, String>>> lists) {
-            //get list route and display it into the map
-
-            ArrayList points = null;
-
-            PolylineOptions polylineOptions = null;
-
-            for (List<HashMap<String, String>> path : lists) {
-                points = new ArrayList();
-                polylineOptions = new PolylineOptions();
-
-                for (HashMap<String, String> point : path) {
-                    double lat = Double.parseDouble(point.get("lat"));
-                    double lon = Double.parseDouble(point.get("lon"));
-
-                    points.add(new LatLng(lat, lon));
-                }
-
-                polylineOptions.addAll(points);
-                polylineOptions.width(20);
-                polylineOptions.color(Color.CYAN);
-                polylineOptions.geodesic(true);
-                List<PatternItem> pattern = Arrays.asList(new Dot(), new Gap(20));
-                polylineOptions.pattern(pattern);
-                polylineOptions.endCap(new RoundCap());
-            }
-
-            if (polylineOptions!=null) {
-                clearPolylines();
-                polyline = mMap.addPolyline(polylineOptions);
-
-            } else {
-                Log.d(TAG, "TaskParser: onPostExecute: directions not found");
-                if (targetMark!=null) {
-                    showDirections(targetMark);
-                }
-            }
-        }
-    }
 
     /*---------------------- custom dropdown menu classes ---------------------------*/
+
+    /**
+     * Custom popupwindow method. fills it with info from {@Link #markerList} variable.
+     * Uses the id number in title of the CustomLatLng, "Building::1" id=1 for example,
+     * to identify the target. This is a result from using hardcoded data early on and should
+     * be avoided.
+     *
+     * @return popupWindowMarkers      the finished custom popupwindow ready to use.
+     */
     public PopupWindow popupWindowMarkers() {
         Log.d(TAG, "popupWindowMarkers: creating popupwindow");
-        // initialize a pop up window type
+
         PopupWindow popupWindowMarkers = new PopupWindow(this);
-
-        // the drop down list is a list view
         ListView listViewMarkers = new ListView(this);
-
-        // set our adapter and pass our pop up window contents
         listViewMarkers.setAdapter(listViewAdapter(popUpContents));
 
-        // set the item click listener
         listViewMarkers.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
-                // get the context and main activity to access variables
                 Context mContext = MapActivity.this;
 
                 // add some animation when a list item was clicked
@@ -758,7 +918,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 fadeInAnimation.setDuration(10000);
                 v.startAnimation(fadeInAnimation);
 
-                // dismiss the pop up
                 popupWindow.dismiss();
 
                 // get the text and set it as the button text
@@ -767,7 +926,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 // get the id
                 String selectedItemTag = ((TextView) v).getTag().toString();
-                Toast.makeText(mContext, "ID is: " + selectedItemTag, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(mContext, "ID is: " + selectedItemTag, Toast.LENGTH_SHORT).show();
 
                 // call the show directions method using the id
                 for (CustomLatLng item : markerList) {
@@ -795,8 +954,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
-    /*
-     * adapter where the list values will be set
+    /**
+     *  Adapter for the custom popupwindow where the list values will be set. Used by {@Link #popupWindowMarkers}
+     *
+     * @param markerArray       The items to populate the listview with
+     * @return                  returns the filled adapter ready to be used for views.
      */
     private ArrayAdapter<String> listViewAdapter(String markerArray[]) {
 
@@ -833,14 +995,20 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /*----------------------------- guided tour methods below ------------------------------------*/
 
+    /**
+     * Inital guided tour method. should only be called once per tour.
+     * ordering of tour methods doTheTour() -> onTheTour() -> makeAdialog() -> endTour().
+     */
     private void doTheTour(){
         Log.d(TAG, "doTheTour: tour started");
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(MapActivity.this);
-        builder.setMessage("Welcome to De Montfort University! \nLets go on a tour around campus! " +
+        builder.setMessage("Welcome to De Montfort University! \n" +
+                "To make your transition to university life here at DMU we would like to " +
+                "take you on a tour around campus to show the main places of interest. " +
                 "\nWhen you find the place just click the button at the bottom of the screen " +
                 "to continue on with the tour" );
-        builder.setPositiveButton("Yeah boi lez go!", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 Log.d(TAG, "doTheTour: onClick: clicked");
@@ -854,25 +1022,31 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         alertDialog.show();
     }
 
+    /**
+     * Main tour method. Looks redundant. howver, the author had portability plans which would involve
+     * database handler methods to be called in here and then passed into makeAdialog or other methods.
+     */
     public void onTheTour(){
         Log.d(TAG, "onTheTour: called");
-
         makeAdialog(markerTourList.get(counter));
         targetMark = markerTourList.get(counter);
-
-
-
         }
 
+    /**
+     * Creates a custom popupwindow and fills it with information taken from the custom latlng paramater.
+     * uses the following methods: showDirections, moveCamera, placeMarker.
+     * @param customLatLng the current targetmarker to present information about through this guided
+     *                     tour popup dialog creater method.
+     */
     public void makeAdialog(CustomLatLng customLatLng){
         Log.d(TAG, "makeAdialog: called.");
 
+        //alertdialog and custom layout
         AlertDialog.Builder builder = new AlertDialog.Builder(MapActivity.this);
-        builder.setMessage(customLatLng.getTourInfo());
-
         LayoutInflater inflater = getLayoutInflater();
         View dialoglayout = inflater.inflate(R.layout.custom_dialog, null);
 
+        //pick image title depending on title in the customLatLng para
         String imageString = customLatLng.getTitle().substring(0,2);
         if (imageString.contains(" ")) {
             imageString = imageString.substring(0, 1);
@@ -883,6 +1057,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         ImageView icon = (ImageView) dialoglayout.findViewById(R.id.imageDialog);
         icon.setImageResource(imageId);
 
+        //fill the textview with customlatlng tourinfo
+        TextView textView = (TextView) dialoglayout.findViewById(R.id.textDialog);
+        textView.setText(customLatLng.getTourInfo());
+        textView.setMovementMethod(new ScrollingMovementMethod());
+
+        //more dialog settings, buttons and show it.
         builder.setView(dialoglayout);
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
@@ -894,6 +1074,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 placeMarker(targetMark);
             }
         });
+        if (counter > 0) {
+            builder.setNegativeButton("BACK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    counter--;
+                    onTheTour();
+                }
+            });
+        }
         builder.setCancelable(false);
         AlertDialog alertDialog = builder.create();
         alertDialog.getWindow().getAttributes().windowAnimations = R.style.DialogTheme;
@@ -901,6 +1091,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
+    /**
+     * final touring method whith a final popup dialog whcih exits the activity
+     */
     private void endTour(){
         Log.d(TAG, "endTour: called");
 
@@ -923,6 +1116,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         alertDialog.show();
     }
 
+
+    //----------------------------------------- redundant code below -------------------------------------------------
+
+    /**
+     * since the author did not have access to a remote server from which he could run a SQL server on this
+     * method was used to populate the local SQLite database.
+     * should only be called once.
+     */
     private void populateDB(){
         Log.d(TAG, "populateDB: called");
         mySqliteOpenHelper.addRow("52.629682", "-1.138504", "CC - Campus Centre::1",
@@ -966,5 +1167,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         "seven days a week, giving you access to more than half a million publications and a wide range of DVDs, " +
                         "as well as e-resources and thousands of electronic journals. We have 1,500 study places and 650 computer " +
                         "workstations across four sites on campus.");
+    }
+
+    /* --------- Junit tests below ---------*/
+
+    public GoogleMap getMapMap(){
+        return mMap;
+    }
+    public SQLiteDatabase getmDatabase(){
+        return mDatabase;
     }
 }

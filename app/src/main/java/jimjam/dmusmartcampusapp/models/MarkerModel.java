@@ -1,15 +1,13 @@
 package jimjam.dmusmartcampusapp.models;
 
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
-
 import java.util.ArrayList;
 
-import jimjam.dmusmartcampusapp.MapActivity;
-
 /**
- * Created by Jimmie on 04/02/2018.
+ * <p>A class used prior to database functionality in this application.
+ * Used to provide the MapActivity class with CustomLatLng marker instances. </p>
+ *
+ * <p>DO NOTE: deprecated / no longer in use.</p>
+ * @author Jimmie / p15241925
  */
 
 public class MarkerModel {

@@ -23,16 +23,19 @@
             android:value="AIzaSyCXcpvtlfWqga_YO7NX8Dg45mtMSvjNK2k"/>
 
 
-        <activity android:name="jimjam.dmusmartcampusapp.MainActivity">
+        <activity
+            android:name="jimjam.dmusmartcampusapp.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="jimjam.dmusmartcampusapp.MapActivity">
+
+        <activity
+            android:name="jimjam.dmusmartcampusapp.MapActivity"
+            android:configChanges="orientation|screenSize">
 
         </activity>
     </application>
-
 </manifest>
