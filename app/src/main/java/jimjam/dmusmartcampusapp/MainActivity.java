@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     /**
      * Overrides the callback interface for when the map is ready to be used.
      * Used by local method initMap() below.
-     * @param googleMap
+     * @param googleMap Map object ready to be interacted with
      */
     @Override
     public void onMapReady(GoogleMap googleMap){
@@ -149,7 +149,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public boolean isServicesOK(){
         Log.d(TAG, "isServicesOK: checking google services version");
 
-        int available = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(MainActivity.this);
+        int available = GoogleApiAvailability.getInstance()
+                .isGooglePlayServicesAvailable(MainActivity.this);
 
         if (available == ConnectionResult.SUCCESS){
             //everything is fine and the user device can make map requests
@@ -159,16 +160,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else if (GoogleApiAvailability.getInstance().isUserResolvableError(available)){
             // an error occured but we can resolve it
             Log.d(TAG, "isServicesOK: an error occured but we can fix it");
-            Dialog dialog = GoogleApiAvailability.getInstance().getErrorDialog(MainActivity.this, available, ERROR_DIALOG_REQUEST);
+            Dialog dialog = GoogleApiAvailability.getInstance()
+                    .getErrorDialog(MainActivity.this, available, ERROR_DIALOG_REQUEST);
             dialog.show();
         } else {
-            Toast.makeText(this, "you cant make map requests", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "cant make map requests", Toast.LENGTH_SHORT).show();
         }
         return false;
     }
 
     //////////////////////////////////////
     // initial permission request methods.
+
+    /**
+     * check if the application has the required permission to perform map requests.
+     * If not requests them by prompting user decision.
+     */
     public void getLocationPermission(){
         Log.d(TAG,"getLocationPermission: getting location permissions");
         String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
@@ -192,6 +199,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    /**
+     * ---BELOW TAKEN FROM SUPER METHOD---
+     *
+     * Callback for the result from requesting permissions. This method
+     * is invoked for every call on {@link #requestPermissions(String[], int)}.
+     * <p>
+     * <strong>Note:</strong> It is possible that the permissions request interaction
+     * with the user is interrupted. In this case you will receive empty permissions
+     * and results arrays which should be treated as a cancellation.
+     * </p>
+     *
+     * @param requestCode The request code passed in {@link #requestPermissions(String[], int)}.
+     * @param permissions The requested permissions. Never null.
+     * @param grantResults The grant results for the corresponding permissions
+     *     which is either {@link android.content.pm.PackageManager#PERMISSION_GRANTED}
+     *     or {@link android.content.pm.PackageManager#PERMISSION_DENIED}. Never null.
+     *
+     * @see #requestPermissions(String[], int)
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         Log.d(TAG,"onRequestPermissionResults: called.");

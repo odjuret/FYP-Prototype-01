@@ -1,20 +1,4 @@
-[{
-  "geocoded_waypoints" : [
-    {
-      "geocoder_status" : "OK",
-      "place_id" : "ChIJOwg_06VPwokRYv534QaPC8g",
-      "types" : [ "locality", "political" ]
-    },
-    {
-      "geocoder_status" : "OK",
-      "place_id" : "ChIJpVER8hFT5okRmVl96ahKjsw",
-      "types" : [ "locality", "political" ]
-    },
-    {
-      "geocoder_status" : "OK",
-      "place_id" : "ChIJXXN-Q-BE5IkRJ7azSE1832k",
-      "types" : [ "locality", "political" ]
-    },
+[{"geocoded_waypoints" : [
     {
       "geocoder_status" : "OK",
       "place_id" : "ChIJGzE9DS1l44kRoOhiASS_fHg",
@@ -23,361 +7,54 @@
   ],
   "routes" : [
     {
-      "bounds" : {
-        "northeast" : {
-          "lat" : 42.361087,
-          "lng" : -71.0206956
+      "bounds": {
+        "northeast": {
+          "lat": 42.361087,
+          "lng": -71.0206956
         },
-        "southwest" : {
-          "lat" : 40.7087115,
-          "lng" : -74.0065973
+        "southwest": {
+          "lat": 40.7087115,
+          "lng": -74.0065973
         }
       },
-      "copyrights" : "Map data ©2015 Google",
-      "legs" : [
+      "copyrights": "Map data ©2015 Google",
+      "legs": [
         {
-          "distance" : {
-            "text" : "117 mi",
-            "value" : 188034
+          "start_address": "New York, NY, USA",
+          "start_location": {
+            "lat": 40.71265260000001,
+            "lng": -74.0065973
           },
-          "duration" : {
-            "text" : "2 hours 12 mins",
-            "value" : 7897
-          },
-          "end_address" : "Hartford, CT, USA",
-          "end_location" : {
-            "lat" : 41.7637157,
-            "lng" : -72.6852925
-          },
-          "start_address" : "New York, NY, USA",
-          "start_location" : {
-            "lat" : 40.71265260000001,
-            "lng" : -74.0065973
-          },
-          "steps" : [
+          "steps": [
             {
-              "distance" : {
-                "text" : "240 ft",
-                "value" : 73
+
+              "end_location": {
+                "lat": 40.7130849,
+                "lng": -74.00721879999999
               },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 9
+              "html_instructions": "Head \u003cb\u003enorthwest\u003c/b\u003e on \u003cb\u003eSteve Flanders Square\u003c/b\u003e toward \u003cb\u003eBroadway\u003c/b\u003e/\u003cb\u003eCanyon of Heroes\u003c/b\u003e\u003cdiv style=\"font-size:0.9em\"\u003eRestricted usage road\u003c/div\u003e",
+              "polyline": {
+                "points": "aunwFflubMy@fB[R"
               },
-              "end_location" : {
-                "lat" : 40.7130849,
-                "lng" : -74.00721879999999
+              "start_location": {
+                "lat": 40.71265260000001,
+                "lng": -74.0065973
               },
-              "html_instructions" : "Head \u003cb\u003enorthwest\u003c/b\u003e on \u003cb\u003eSteve Flanders Square\u003c/b\u003e toward \u003cb\u003eBroadway\u003c/b\u003e/\u003cb\u003eCanyon of Heroes\u003c/b\u003e\u003cdiv style=\"font-size:0.9em\"\u003eRestricted usage road\u003c/div\u003e",
-              "polyline" : {
-                "points" : "aunwFflubMy@fB[R"
-              },
-              "start_location" : {
-                "lat" : 40.71265260000001,
-                "lng" : -74.0065973
-              },
-              "travel_mode" : "DRIVING"
+              "travel_mode": "DRIVING"
             },
             {
-              "distance" : {
-                "text" : "0.1 mi",
-                "value" : 222
+              "html_instructions": "Turn \u003cb\u003eleft\u003c/b\u003e onto \u003cb\u003eBroadway\u003c/b\u003e",
+              "maneuver": "turn-left",
+              "polyline": {"points": "wwnwFbpubMdBtARN|AhAvBjB"},
+              "start_location": {
+                "lat": 40.7130849,
+                "lng": -74.00721879999999
               },
-              "duration" : {
-                "text" : "2 mins",
-                "value" : 96
-              },
-              "end_location" : {
-                "lat" : 40.7114005,
-                "lng" : -74.0086398
-              },
-              "html_instructions" : "Turn \u003cb\u003eleft\u003c/b\u003e onto \u003cb\u003eBroadway\u003c/b\u003e",
-              "maneuver" : "turn-left",
-              "polyline" : {
-                "points" : "wwnwFbpubMdBtARN|AhAvBjB"
-              },
-              "start_location" : {
-                "lat" : 40.7130849,
-                "lng" : -74.00721879999999
-              },
-              "travel_mode" : "DRIVING"
-            },
-            {
-              "distance" : {
-                "text" : "0.2 mi",
-                "value" : 246
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 54
-              },
-              "end_location" : {
-                "lat" : 40.7119752,
-                "lng" : -74.0058488
-              },
-              "html_instructions" : "Turn \u003cb\u003eleft\u003c/b\u003e onto \u003cb\u003ePark Row\u003c/b\u003e",
-              "maneuver" : "turn-left",
-              "polyline" : {
-                "points" : "gmnwF~xubMDc@@G?GAGAOOaAm@}Da@cCMq@Ik@"
-              },
-              "start_location" : {
-                "lat" : 40.7114005,
-                "lng" : -74.0086398
-              },
-              "travel_mode" : "DRIVING"
-            },
-            {
-              "distance" : {
-                "text" : "0.3 mi",
-                "value" : 463
-              },
-              "duration" : {
-                "text" : "2 mins",
-                "value" : 112
-              },
-              "end_location" : {
-                "lat" : 40.7094901,
-                "lng" : -74.001672
-              },
-              "html_instructions" : "Slight \u003cb\u003eright\u003c/b\u003e onto \u003cb\u003eFrankfort St\u003c/b\u003e",
-              "maneuver" : "turn-slight-right",
-              "polyline" : {
-                "points" : "{pnwFpgubM@K@CE{@ ...points truncated in this example"
-              },
-              "start_location" : {
-                "lat" : 40.7119752,
-                "lng" : -74.0058488
-              },
-              "travel_mode" : "DRIVING"
-            },
-            {
-              "distance" : {
-                "text" : "36 ft",
-                "value" : 11
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 25
-              },
-              "end_location" : {
-                "lat" : 40.7095586,
-                "lng" : -74.0015825
-              },
-              "html_instructions" : "Turn \u003cb\u003eleft\u003c/b\u003e onto \u003cb\u003ePearl St\u003c/b\u003e",
-              "maneuver" : "turn-left",
-              "polyline" : {
-                "points" : "ianwFlmtbMMQ"
-              },
-              "start_location" : {
-                "lat" : 40.7094901,
-                "lng" : -74.001672
-              },
-              "travel_mode" : "DRIVING"
-            },
-            {
-              "distance" : {
-                "text" : "0.5 mi",
-                "value" : 746
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 60
-              },
-              "end_location" : {
-                "lat" : 40.709302,
-                "lng" : -73.9941819
-              },
-              "html_instructions" : "Take the \u003cb\u003eFDR Drive N\u003c/b\u003e ramp",
-              "polyline" : {
-                "points" : "wanwFzltbMCS ...points truncated in this example"
-              },
-              "start_location" : {
-                "lat" : 40.7095586,
-                "lng" : -74.0015825
-              },
-              "travel_mode" : "DRIVING"
+              "travel_mode": "DRIVING"
             }
-
-
-          ],
-          "via_waypoint" : []
-        },
-        {
-          "distance" : {
-            "text" : "87.3 mi",
-            "value" : 140570
-          },
-          "duration" : {
-            "text" : "1 hour 33 mins",
-            "value" : 5603
-          },
-          "end_address" : "Providence, RI, USA",
-          "end_location" : {
-            "lat" : 41.8238542,
-            "lng" : -71.412656
-          },
-          "start_address" : "Hartford, CT, USA",
-          "start_location" : {
-            "lat" : 41.7637157,
-            "lng" : -72.6852925
-          },
-          "steps" : [
-            {
-              "distance" : {
-                "text" : "164 ft",
-                "value" : 50
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 11
-              },
-              "end_location" : {
-                "lat" : 41.7641617,
-                "lng" : -72.6852741
-              },
-              "html_instructions" : "Head \u003cb\u003enorth\u003c/b\u003e on \u003cb\u003eHungerford St\u003c/b\u003e toward \u003cb\u003eMichael J Fallon Way\u003c/b\u003e",
-              "polyline" : {
-                "points" : "g~{}F`jszLa@?u@C"
-              },
-              "start_location" : {
-                "lat" : 41.7637157,
-                "lng" : -72.6852925
-              },
-              "travel_mode" : "DRIVING"
-            },
-            {
-              "distance" : {
-                "text" : "364 ft",
-                "value" : 111
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 26
-              },
-              "end_location" : {
-                "lat" : 41.7642071,
-                "lng" : -72.68661609999999
-              },
-              "html_instructions" : "Turn \u003cb\u003eleft\u003c/b\u003e onto \u003cb\u003eMichael J Fallon Way\u003c/b\u003e",
-              "maneuver" : "turn-left",
-              "polyline" : {
-                "points" : "_a|}F|iszL?@CrBEvC"
-              },
-              "start_location" : {
-                "lat" : 41.7641617,
-                "lng" : -72.6852741
-              },
-              "travel_mode" : "DRIVING"
-            },
-            {
-              "distance" : {
-                "text" : "0.1 mi",
-                "value" : 219
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 32
-              },
-              "end_location" : {
-                "lat" : 41.7661707,
-                "lng" : -72.68643109999999
-              },
-              "html_instructions" : "Turn \u003cb\u003eright\u003c/b\u003e onto \u003cb\u003eBroad St\u003c/b\u003e",
-              "maneuver" : "turn-right",
-              "polyline" : {
-                "points" : "ia|}FjrszL_GUg@Ci@Cu@G"
-              },
-              "start_location" : {
-                "lat" : 41.7642071,
-                "lng" : -72.68661609999999
-              },
-              "travel_mode" : "DRIVING"
-            }
-
-
-          ],
-          "via_waypoint" : []
-        },
-        {
-          "distance" : {
-            "text" : "50.2 mi",
-            "value" : 80771
-          },
-          "duration" : {
-            "text" : "59 mins",
-            "value" : 3519
-          },
-          "end_address" : "Boston, MA, USA",
-          "end_location" : {
-            "lat" : 42.359824,
-            "lng" : -71.05981249999999
-          },
-          "start_address" : "Providence, RI, USA",
-          "start_location" : {
-            "lat" : 41.8238542,
-            "lng" : -71.412656
-          },
-          "steps" : [
-            {
-              "distance" : {
-                "text" : "98 ft",
-                "value" : 30
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 10
-              },
-              "end_location" : {
-                "lat" : 41.8236618,
-                "lng" : -71.41291819999999
-              },
-              "html_instructions" : "Head \u003cb\u003esouthwest\u003c/b\u003e on \u003cb\u003eFulton St\u003c/b\u003e toward \u003cb\u003eEddy St\u003c/b\u003e",
-              "polyline" : {
-                "points" : "avg~FbxzrLd@r@"
-              },
-              "start_location" : {
-                "lat" : 41.8238542,
-                "lng" : -71.412656
-              },
-              "travel_mode" : "DRIVING"
-            },
-            {
-              "distance" : {
-                "text" : "249 ft",
-                "value" : 76
-              },
-              "duration" : {
-                "text" : "1 min",
-                "value" : 36
-              },
-              "end_location" : {
-                "lat" : 41.8231424,
-                "lng" : -71.4123232
-              },
-              "html_instructions" : "Turn \u003cb\u003eleft\u003c/b\u003e onto \u003cb\u003eEddy St\u003c/b\u003e",
-              "maneuver" : "turn-left",
-              "polyline" : {
-                "points" : "{tg~FvyzrLr@y@r@}@"
-              },
-              "start_location" : {
-                "lat" : 41.8236618,
-                "lng" : -71.41291819999999
-              },
-              "travel_mode" : "DRIVING"
-            }
-
-
-          ],
-          "via_waypoint" : []
+          ]
         }
-      ],
-      "overview_polyline" : {
-        "points" : "aunwFflubMd ...points truncated in this example"
-      },
-      "summary" : "I-95 N and CT-15 N",
-      "warnings" : [],
-      "waypoint_order" : [ 1, 0 ]
-    }
-  ],
+      ]
+    }],
   "status" : "OK"
 }]

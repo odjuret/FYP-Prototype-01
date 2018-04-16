@@ -32,11 +32,24 @@ dependencies {
 
     implementation 'com.google.android.gms:play-services-location:11.8.0'
 
-    //testing
+    //espresso testing tool
     androidTestCompile 'com.android.support.test.espresso:espresso-core:3.0.1'
     androidTestCompile 'com.android.support.test:runner:1.0.1'
     compile fileTree(dir: 'libs', include: ['*.jar'])
 
+    //Robolectric
+    testImplementation "org.robolectric:robolectric:3.8"
+
+    android {
+        testOptions {
+            unitTests {
+                includeAndroidResources = true
+            }
+        }
+    }
+
+    //useful testing libraries
+    testCompile 'org.json:json:20140107'
     testCompile 'junit:junit:4.12'
     testCompile 'org.hamcrest:hamcrest-library:1.3'
     androidTestCompile ('com.android.support.test:runner:0.5'){

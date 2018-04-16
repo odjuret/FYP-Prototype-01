@@ -36,6 +36,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -69,6 +70,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -154,7 +156,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private SQLiteDatabase mDatabase;
     private SQLiteDatabase mWriteAbleDB;
 
-
+    private ProgressBar progressBar;
 
     //methods
 
@@ -258,6 +260,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         buttonShowDropDown = (Button) findViewById(R.id.buttonShowDropDown);
         nextButton = (Button) findViewById(R.id.nextBtn);
 
+        progressBar = (ProgressBar) findViewById(R.id.determinateBar);
+        progressBar.setMax(10);
+        progressBar.setProgress(0);
+        progressBar.setVisibility(View.GONE);
+
+
         mLocationCallback = new LocationCallback(){
             @Override
             public void onLocationResult(LocationResult locationResult) {
@@ -302,6 +310,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         super.onPause();
         stopLocationUpdates();
     }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        stopLocationUpdates();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -452,7 +467,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             taskRequestDirections.execute(url);
                         } else {
                             Log.d(TAG, "showDirections: onComplete: last known location is null");
-                            Toast.makeText(MapActivity.this, "unable to get last know current location", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MapActivity.this,
+                                    "unable to get last known current location", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -550,14 +566,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return responseString;
     }
 
-
     /**
      * Inner class used by showDirections method(). Queries the googlemaps web api
      * using the local requestDirection class.
      * Extends AsyncTask so the requests and polyline drawing on the map can be done without
      * pausing the application / interrupting the user experience.
      */
-    public class TaskRequestDirections extends AsyncTask<String, Void, String>{
+    public class TaskRequestDirections extends AsyncTask<String, Integer, String>{
 
         /**
          * Override this method to perform a computation on a background thread.
@@ -575,11 +590,25 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             try {
                 responseString = requestDirection(strings[0]);
+                //publishProgress(someprogress);
             } catch (IOException e) {
                 e.printStackTrace();
             }
             return responseString;
         }
+
+//        @Override
+//        protected void onPreExecute() {
+//            super.onPreExecute();
+//            progressBar.setVisibility(View.VISIBLE);
+//        }
+//
+//        @Override
+//        protected void onProgressUpdate(Integer... progress) {
+//            super.onProgressUpdate(progress);
+//            progressBar.setProgress(progress[0]);
+//
+//        }
 
         /**
          * Runs on the UI thread after doInBackground.
@@ -593,6 +622,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             //Parse json here
             TaskParser taskParser = new TaskParser();
             taskParser.execute(s);
+            //progressBar.setVisibility(View.GONE);
+
         }
     }
 
@@ -633,7 +664,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
          * Runs on the UI thread after doInBackground.
          * The specified result is the value returned by doInBackground.
          *
-         * @param lists
+         * @param lists     returned response from doInBackground which represents the arrays and
+         *                  nested arrays from the JSON object as lists and hashmaps.
          */
         @Override
         protected void onPostExecute(List<List<HashMap<String, String>>> lists) {
@@ -651,6 +683,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     double lat = Double.parseDouble(point.get("lat"));
                     double lon = Double.parseDouble(point.get("lon"));
 
+                    //Log.d(TAG, "TaskParser: onPostExecute: lat:" + lat +",, lon: " +lon);
                     points.add(new LatLng(lat, lon));
                 }
 

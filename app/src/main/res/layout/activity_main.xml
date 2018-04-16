@@ -34,7 +34,4 @@
             android:text="@string/main_button2" />
 
     </LinearLayout>
-
-
-
 </RelativeLayout>

@@ -29,6 +29,17 @@
 
             />
 
+    <ProgressBar
+        android:id="@+id/determinateBar"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_alignTop="@id/map"
+        android:layout_marginTop="70dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:progress="1"/>
 
     <ImageView
         android:layout_width="40dp"

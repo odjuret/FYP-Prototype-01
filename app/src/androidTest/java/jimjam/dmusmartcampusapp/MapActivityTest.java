@@ -77,15 +77,20 @@ public class MapActivityTest {
 
         assertNotNull(supportMapFragment);
         assertNotNull(googleMap);
+
+        onView(withId(R.id.map)).check(matches(isDisplayed()));
     }
 
     @Test
-    public void onCreate() throws Exception {
+    public void buttonsCheck() throws Exception {
         View button1 = mapActivity.findViewById(R.id.buttonShowDropDown);
         View button2 = mapActivity.findViewById(R.id.ic_gps);
 
         assertNotNull(button1);
         assertNotNull(button2);
+
+        onView(withId(R.id.buttonShowDropDown)).check(matches(isDisplayed()));
+        onView(withId(R.id.ic_gps)).check(matches(isDisplayed()));
     }
 
     @Test
@@ -111,7 +116,6 @@ public class MapActivityTest {
 
         //start
         onView(withId(R.id.buttonShowDropDown)).perform(click());
-
         onView(withText("CC - Campus Centre")).perform(click());
 
         // make sure espresso does not time out
